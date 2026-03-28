@@ -11,7 +11,7 @@ class NeonButton extends StatefulWidget {
   const NeonButton({
     super.key,
     required this.text,
-    this.color = NeonColors.cyberCyan, // 기본값은 사이버 시안
+    this.color = NeonColors.cyan, // 기본값은 사이버 시안
     required this.onPressed,
     this.width = 200,
     this.height = 60,
