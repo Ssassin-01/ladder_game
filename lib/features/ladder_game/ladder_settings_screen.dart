@@ -63,7 +63,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                     ),
                   ),
                   _circleButton('+', () {
-                    if (viewModel.playerCount < 8) viewModel.setPlayerCount(viewModel.playerCount + 1);
+                    if (viewModel.playerCount < 20) viewModel.setPlayerCount(viewModel.playerCount + 1);
                   }, themeProvider.isDarkMode),
                 ],
               ),
@@ -80,24 +80,9 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 activeColor: themeProvider.isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen,
                 onChanged: (val) => viewModel.setSpeedLevel(val.toInt()),
               ),
-              const SizedBox(height: 40),
-
-              // 3. 가림막 사용 유무
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _sectionTitle('가림막 사용', themeProvider.isDarkMode ? NeonColors.cyan : NeonColors.solidCyan, themeProvider.isDarkMode),
-                  const SizedBox(width: 15),
-                  Switch(
-                    value: viewModel.isShroudVisible,
-                    onChanged: (val) => viewModel.toggleShroudSetting(),
-                    activeColor: NeonColors.hotPink,
-                  ),
-                ],
-              ),
               const SizedBox(height: 60),
 
-              // 4. 시작하기 버튼
+              // 3. 시작하기 버튼
               NeonButton(
                 text: '게임 시작!',
                 color: themeProvider.isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen,

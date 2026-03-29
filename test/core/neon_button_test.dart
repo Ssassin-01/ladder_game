@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:betting_app/core/neon_button.dart';
+import 'package:betting_app/core/neon_theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
   testWidgets('NeonButton renders text and triggers onPressed on tap', (WidgetTester tester) async {
     bool isPressed = false;
     const buttonText = '테스트 버튼';
 
-    // Build the NeonButton widget
+    // Build the NeonButton widget wrapped in ThemeProvider
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: NeonButton(
-            text: buttonText,
-            onPressed: () {
-              isPressed = true;
-            },
+      ChangeNotifierProvider<ThemeProvider>(
+        create: (_) => ThemeProvider(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: NeonButton(
+              text: buttonText,
+              onPressed: () {
+                isPressed = true;
+              },
+            ),
           ),
         ),
       ),

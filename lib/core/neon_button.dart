@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'neon_theme.dart';
 
 class NeonButton extends StatefulWidget {
@@ -56,6 +57,8 @@ class _NeonButtonState extends State<NeonButton>
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
+
     return GestureDetector(
       onTap: _handleTap,
       child: ScaleTransition(
@@ -64,18 +67,23 @@ class _NeonButtonState extends State<NeonButton>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: NeonColors.backgroundBlack, // 배경은 블랙
+            color: isDarkMode ? NeonColors.backgroundBlack : const Color(0xFF1A237E),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: widget.color,
-              width: 3, // 두꺼운 네온 테두리
+              color: isDarkMode ? widget.color : Colors.white.withOpacity(0.3),
+              width: 3, 
             ),
-            boxShadow: [
-              // 테두리에 네온 발광 효과 (BoxShadow)
+            boxShadow: isDarkMode ? [
               BoxShadow(
-                color: widget.color.withValues(alpha: 0.5),
+                color: widget.color.withOpacity(0.5),
                 blurRadius: 15,
                 spreadRadius: 2,
+              ),
+            ] : [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -83,12 +91,11 @@ class _NeonButtonState extends State<NeonButton>
           child: Text(
             widget.text,
             style: TextStyle(
-              color: widget.color,
+              color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              // 텍스트에 네온 발광 효과 (Shadow)
-              shadows: NeonColors.getGlow(widget.color),
-              fontFamily: 'Roboto', // 실제 고딕 계열 폰트가 앱에 설정되어야 함
+              shadows: isDarkMode ? NeonColors.getGlow(widget.color) : null,
+              fontFamily: 'Roboto',
             ),
           ),
         ),

@@ -66,7 +66,7 @@ class ThemeProvider extends ChangeNotifier {
 
   static final lightTheme = ThemeData(
     brightness: Brightness.light,
-    scaffoldBackgroundColor: const Color(0xFFFDFDFD),
+    scaffoldBackgroundColor: const Color(0xFFF8F9FA),
     primaryColor: NeonColors.solidCyan,
     colorScheme: const ColorScheme.light(
       primary: NeonColors.solidCyan,
