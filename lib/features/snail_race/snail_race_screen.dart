@@ -7,7 +7,7 @@ class SnailRaceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('달팽이 경주')),
-      body: const Center(child: Text('준비 중...')),
+      body: const Center(child: Text('준비중..')),
     );
   }
 }

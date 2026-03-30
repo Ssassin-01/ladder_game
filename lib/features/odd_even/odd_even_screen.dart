@@ -37,7 +37,7 @@ class _OddEvenScreenState extends State<OddEvenScreen> {
         _resultText = '정답! [$result]';
         _resultColor = NeonColors.limeGreen;
       } else {
-        _resultText = '꽝! [$result]';
+        _resultText = '땡! [$result]';
         _resultColor = NeonColors.hotPink;
       }
     });
@@ -59,7 +59,7 @@ class _OddEvenScreenState extends State<OddEvenScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 결과 창 (네온 텍스트)
+            // 결과창 (네온 텍스트)
             Container(
               height: 150,
               alignment: Alignment.center,

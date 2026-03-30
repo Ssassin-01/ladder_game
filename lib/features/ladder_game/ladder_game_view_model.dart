@@ -14,7 +14,7 @@ class Participant {
     required this.color,
   });
 
-  String get displayName => customName ?? '$animalType님';
+  String get displayName => customName ?? animalType;
 }
 
 class LadderBar {
@@ -38,7 +38,7 @@ class LadderGameViewModel extends ChangeNotifier {
   final List<Participant> _allAvailableParticipants = [
     Participant(animalType: '사자', emoji: '🦁', color: Colors.orangeAccent),
     Participant(animalType: '고양이', emoji: '🐱', color: Colors.pinkAccent),
-    Participant(animalType: '곰', emoji: '🐻', color: Colors.brown),
+    Participant(animalType: '소', emoji: '🐮', color: Colors.brown),
     Participant(animalType: '강아지', emoji: '🐶', color: Colors.lightBlueAccent),
     Participant(animalType: '여우', emoji: '🦊', color: Colors.deepOrangeAccent),
     Participant(animalType: '토끼', emoji: '🐰', color: Colors.white70),
@@ -50,12 +50,12 @@ class LadderGameViewModel extends ChangeNotifier {
     Participant(animalType: '원숭이', emoji: '🐵', color: Colors.brown),
     Participant(animalType: '닭', emoji: '🐔', color: Colors.redAccent),
     Participant(animalType: '펭귄', emoji: '🐧', color: Colors.blueGrey),
-    Participant(animalType: '병아리', emoji: '🐤', color: Colors.yellow),
+    Participant(animalType: '병아리', emoji: '🐥', color: Colors.yellow),
     Participant(animalType: '햄스터', emoji: '🐹', color: Colors.orange),
     Participant(animalType: '유니콘', emoji: '🦄', color: Colors.purpleAccent),
     Participant(animalType: '거북이', emoji: '🐢', color: Colors.green),
     Participant(animalType: '코끼리', emoji: '🐘', color: Colors.blueAccent),
-    Participant(animalType: '용', emoji: '🐲', color: Colors.tealAccent),
+    Participant(animalType: '말', emoji: '🐴', color: Colors.tealAccent),
   ];
 
   List<Participant> _currentParticipants = [];
@@ -104,19 +104,17 @@ class LadderGameViewModel extends ChangeNotifier {
       _playerCount,
       (i) => i == winnerIdx ? '당첨!' : '통과',
     );
-    _bottomResults.shuffle(); // 생성 시 셔플 추가
+    _bottomResults.shuffle();
   }
 
   void setSectionCount(int count) {
     _sectionCount = count.clamp(5, 100);
     _generateLadder();
-    _generateResults(); // 설정 변경 시에도 결과 셔플
     notifyListeners();
   }
 
   void setPlayerCount(int count) {
     _playerCount = count;
-    // 참가자 수 기반 가로선 기본값 동적 변경 (참가자 수 * 1.5 올림)
     _sectionCount = (count * 1.5).ceil().clamp(5, 100);
     _initData();
     _saveSettings();
@@ -131,8 +129,7 @@ class LadderGameViewModel extends ChangeNotifier {
 
   void refreshLadder() {
     _generateLadder();
-    _generateResults(); // 섞기 시 결과 셔플
-    // _isShroudActive = true; // 가림막 상태 유지 (유저 요청)
+    _generateResults();
     notifyListeners();
   }
 
@@ -165,7 +162,6 @@ class LadderGameViewModel extends ChangeNotifier {
       attempts++;
       int col = random.nextInt(_playerCount - 1);
       int row = random.nextInt(_sectionCount);
-      // 상단(0)과 하단(_sectionCount-1) 영역 보호 (가로선 방지)
       if (row < 1 || row >= _sectionCount - 1) continue;
       if (_ladderBars[col][row].exists) continue;
       bool hasLeft = col > 0 && _ladderBars[col - 1][row].exists;

@@ -12,7 +12,7 @@ class NeonButton extends StatefulWidget {
   const NeonButton({
     super.key,
     required this.text,
-    this.color = NeonColors.cyan, // 기본값은 사이버 시안
+    this.color = NeonColors.cyan, // 기본값은 사이언
     required this.onPressed,
     this.width = 200,
     this.height = 60,
@@ -30,7 +30,7 @@ class _NeonButtonState extends State<NeonButton>
   @override
   void initState() {
     super.initState();
-    // 터치 시 스케일이 약간 커졌다 작아지는 애니메이션 (타격감 강조)
+    // 터치 시 버튼이 잠깐 커졌다 작아지는 애니메이션 (타격감 강조)
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
@@ -47,11 +47,11 @@ class _NeonButtonState extends State<NeonButton>
   }
 
   void _handleTap() async {
-    // 1. 애니메이션 실행 (스케일 업)
+    // 1. 애니메이션 실행 (스케일업)
     await _controller.forward();
-    // 2. 다시 돌아오기 (스케일 다운)
+    // 2. 다시 돌아오기 (스케일다운)
     await _controller.reverse();
-    // 3. 실제 동작 수행
+    // 3. 실제 동작 실행
     widget.onPressed();
   }
 

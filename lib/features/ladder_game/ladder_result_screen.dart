@@ -41,7 +41,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
   void initState() {
     super.initState();
     
-    // 당첨된 사람을 리스트의 첫 번째로 정렬
+    // 당첨된 사람을 리스트의 앞부분으로 정렬
     _sortedResults = List.from(widget.results);
     _sortedResults.sort((a, b) {
       final aWin = a.text.contains('당첨');

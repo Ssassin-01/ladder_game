@@ -11,13 +11,13 @@ void main() {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LadderGameViewModel()),
       ],
-      child: const BettingApp(),
+      child: const LadderGameApp(),
     ),
   );
 }
 
-class BettingApp extends StatelessWidget {
-  const BettingApp({super.key});
+class LadderGameApp extends StatelessWidget {
+  const LadderGameApp({super.key});
 
   @override
   Widget build(BuildContext context) {

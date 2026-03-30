@@ -12,7 +12,7 @@ class LadderPainter extends CustomPainter {
   final List<Color>? participantColors;
   final bool isDarkMode;
   final LadderGameViewModel? viewModel;
-  final double ladderHeight; // 외부에서 계산된 정확한 사다리 영역 높이
+  final double ladderHeight; // 앱에서 계산된 정확한 사다리 영역 높이
 
   LadderPainter({
     required this.playerCount,
@@ -126,7 +126,7 @@ class LadderPainter extends CustomPainter {
             canvas.drawPath(extractPath, corePaint);
           } else {
             final hsvColor = HSVColor.fromColor(color);
-            // 라이트 모드: 선명도를 위해 더 어둡고 채도가 높은 색상 사용
+            // 라이트 모드: 시인성을 위해 좀 더 어둡고 채도가 높은 색상 적용
             final vibrantColor = hsvColor
                 .withValue((hsvColor.value * 0.5).clamp(0.0, 1.0))
                 .withSaturation((hsvColor.saturation * 1.5).clamp(0.0, 1.0))

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:betting_app/core/neon_button.dart';
-import 'package:betting_app/core/neon_theme.dart';
+import 'package:ladder_game/core/neon_button.dart';
+import 'package:ladder_game/core/neon_theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +36,7 @@ void main() {
     // 2. Tap the button
     await tester.tap(find.byType(NeonButton));
     
-    // Tap 애니메이션(150ms)과 이후 동작을 위해 시간을 흐르게 함
+    // 애니메이션(150ms) 이후 동작을 위해 시간을 흐르게 함
     await tester.pumpAndSettle();
 
     // 3. Verify that the onPressed callback was triggered

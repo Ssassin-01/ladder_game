@@ -45,7 +45,7 @@ class HomeScreen extends StatelessWidget {
 
               _buildGameButton(
                 context,
-                text: '사다리 타기',
+                text: '사다리 게임',
                 color: NeonColors.limeGreen,
                 targetScreen: const LadderSettingsScreen(),
               ),

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:betting_app/features/ladder_game/ladder_game_view_model.dart';
+import 'package:ladder_game/features/ladder_game/ladder_game_view_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -38,7 +38,7 @@ void main() {
       for (int i = 1; i < bars.length; i++) {
         for (int j = 0; j < viewModel.sectionCount; j++) {
           if (bars[i][j].exists) {
-            // 인접한 칸(좌측)에 이미 선이 있으면 안 됨
+            // 인접한 칸(좌측)에 다리가 없어야 함
             expect(bars[i-1][j].exists, isFalse);
           }
         }

@@ -202,7 +202,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
   void _startAll(LadderGameViewModel viewModel) async {
     if (_isNavigationTriggered) return;
 
-    // 모든 참가자에 대해 미리 결과 스냅샷 확정
+    // 모든 참가자에 대해 미리 결과 스냅샷 설정
     for (int i = 0; i < viewModel.playerCount; i++) {
       final endIdx = viewModel.getResultIndex(i);
       _endIndexSnapshot[i] = endIdx;
@@ -339,7 +339,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                         left: 0,
                         right: 0,
                         height:
-                            ladderHeight + (resultSize / 2), // 결과 칸 중앙까지 캔버스 확장
+                            ladderHeight + (resultSize / 2), // 결과 원 중앙까지 캔버스 확장
                         child: CustomPaint(
                           painter: LadderPainter(
                             playerCount: viewModel.playerCount,
@@ -399,7 +399,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                           ),
                         );
                       }),
-                      // 3. 하단 결과 칸
+                      // 3. 하단 결과 원
                       Positioned(
                         top: topPadding + avatarSize + ladderHeight - 2,
                         left: 0,
@@ -473,7 +473,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                         ),
                       ),
 
-                      // 4. 가림막(Fog) 및 중앙 제어 레이어
+                      // 4. 가림막(Fog) 및 중앙 제어 UI
                       Positioned(
                         top: topPadding + avatarSize + 20,
                         left: 0,
@@ -483,7 +483,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                           ignoring: _isAnimating,
                           child: Stack(
                             children: [
-                              // 가림막 (Blur + 높은 불투명도 + 테두리)
+                              // 가림막 (Blur + 낮은 불투명도 + 테두리)
                               Positioned.fill(
                                 child: AnimatedOpacity(
                                   duration: const Duration(milliseconds: 400),
@@ -524,7 +524,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                   ),
                                 ),
                               ),
-                              // 중앙 제어 UI (게임 시작 전만 보임)
+                              // 중앙 제어 UI (게임 시작 전에만 보임)
                               if (!_isAnimating)
                                 Center(
                                   child: _configPanel(viewModel, isDarkMode),
