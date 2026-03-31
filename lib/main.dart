@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/neon_theme.dart';
-import 'features/home/home_screen.dart';
+import 'features/home/ladder_home_screen.dart';
 import 'features/ladder_game/ladder_game_view_model.dart';
 
 void main() {
@@ -24,10 +24,10 @@ class LadderGameApp extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
-      title: '친구랑 내기 한판 ㄱ?',
+      title: '사다리 게임 마스터',
       debugShowCheckedModeBanner: false,
       theme: themeProvider.currentTheme,
-      home: const HomeScreen(),
+      home: const LadderHomeScreen(),
     );
   }
 }

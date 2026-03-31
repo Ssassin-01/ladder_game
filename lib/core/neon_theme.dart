@@ -16,14 +16,14 @@ class NeonColors {
   static const Color solidGreen = Color(0xFF2E7D32);
   static const Color solidYellow = Color(0xFFFBC02D); // 진한 옐로우 (Amber 느낌)
 
-  static List<Shadow> getGlow(Color color, {bool isDarkMode = true}) {
+  static List<BoxShadow> getGlow(Color color, {bool isDarkMode = true}) {
     if (!isDarkMode) {
       // 라이트 모드에선 번짐 효과 최소화
-      return [Shadow(blurRadius: 1.5, color: Colors.black.withOpacity(0.2))];
+      return [BoxShadow(blurRadius: 1.5, color: Colors.black.withOpacity(0.2))];
     }
     return [
-      Shadow(blurRadius: 8, color: color.withOpacity(0.8)),
-      Shadow(blurRadius: 15, color: color.withOpacity(0.4)),
+      BoxShadow(blurRadius: 8, color: color.withOpacity(0.8)),
+      BoxShadow(blurRadius: 15, color: color.withOpacity(0.4)),
     ];
   }
 }
