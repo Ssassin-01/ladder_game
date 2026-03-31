@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import '../../core/neon_theme.dart';
 import '../../core/neon_button.dart';
@@ -9,6 +8,7 @@ import 'ladder_game_mode.dart';
 import 'ladder_game_view_model.dart';
 import 'ladder_painter.dart';
 import 'ladder_result_screen.dart';
+import '../../core/sound_manager.dart';
 
 class LadderGameScreen extends StatefulWidget {
   const LadderGameScreen({super.key});
@@ -97,7 +97,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
       final p = viewModel.currentParticipants[startIdx];
       final resIdx = _endIndexSnapshot[startIdx] ?? viewModel.getResultIndex(startIdx);
       final resText = _resultTextSnapshot[startIdx] ?? viewModel.bottomResults[resIdx];
-      return ResultItem(emoji: p.emoji, name: p.animalType, color: p.color, text: resText);
+      return ResultItem(emoji: p.emoji, name: p.displayName, color: p.color, text: resText);
     }).toList();
 
     Navigator.of(context).push(MaterialPageRoute(builder: (context) => LadderResultScreen(results: results))).then((_) {
@@ -144,6 +144,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
       if (!mounted) return;
       setState(() { _finishedEndIndices.add(endIdx); });
       if (_finishedEndIndices.length == _activeControllers.length) {
+        SoundManager().playFanfare();
         await _shakeController?.forward(from: 0);
         await Future.delayed(const Duration(milliseconds: 600));
         if (mounted) _navigateToResults(viewModel);
@@ -153,6 +154,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
 
   void _startAll(LadderGameViewModel viewModel) async {
     if (_isNavigationTriggered) return;
+    SoundManager().playSpark();
     for (int i = 0; i < viewModel.playerCount; i++) {
       final endIdx = viewModel.getResultIndex(i);
       _endIndexSnapshot[i] = endIdx;
@@ -271,9 +273,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
               }
             },
             icon: Icon(Icons.refresh, color: isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen)),
-          IconButton(
-            icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan, size: isLandscape ? 20 : 24),
-            onPressed: () => themeProvider.toggleTheme()),
         ],
       ),
       body: SafeArea(
@@ -366,13 +365,13 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                               }
 
                               return Positioned(
-                                left: gap * (i + 1) - (resultSize / 2),
+                                left: gap * (i + 1) - (gap * 0.9 / 2),
                                 child: GestureDetector(
                                   onTap: isOrderMode ? null : () => _showEditResultDialog(context, i, viewModel),
                                   child: Container(
-                                    width: resultSize, height: resultSize,
+                                    width: gap * 0.9, height: resultSize * 0.75,
                                     decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
+                                      borderRadius: BorderRadius.circular(resultSize * 0.35),
                                       color: isDarkMode ? Colors.black87 : Colors.white,
                                       border: Border.all(
                                         color: isTarget ? statusColor : statusColor.withOpacity(0.3), 
@@ -386,7 +385,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                       child: FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Padding(
-                                          padding: const EdgeInsets.all(4.0),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                                           child: Text(resultText, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
                                             style: TextStyle(color: isTarget ? statusColor : (isDarkMode ? Colors.white : Colors.black87),
                                               fontSize: fontSize, fontWeight: FontWeight.bold)),
@@ -444,42 +443,53 @@ class _LadderGameScreenState extends State<LadderGameScreen>
   }
 
   Widget _configPanel(BuildContext context, LadderGameViewModel viewModel, bool isDarkMode) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('가로선 (터치하여 직접 수정)', 
-          style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14)),
-        const SizedBox(height: 15),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _smallCircleButton('-', () {
-              if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
-            }, isDarkMode, onLongPress: () => _startAutoIncrement(false, viewModel), onLongPressEnd: _stopAutoIncrement),
-            
-            const SizedBox(width: 25),
-            
-            // 중앙 숫자 텍스트 (터치 가능하게)
-            InkWell(
-              onTap: () => _showSectionCountDialog(context, viewModel),
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                child: Text('${viewModel.sectionCount}줄',
-                  style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 28)),
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('가로선 (터치하여 직접 수정)', 
+            style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: isLandscape ? 12 : 14)),
+          SizedBox(height: isLandscape ? 8 : 15),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _smallCircleButton('-', () {
+                SoundManager().playTick();
+                if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
+              }, isDarkMode, onLongPress: () => _startAutoIncrement(false, viewModel), onLongPressEnd: _stopAutoIncrement),
+              
+              SizedBox(width: isLandscape ? 15 : 25),
+              
+              // 중앙 숫자 텍스트 (터치 가능하게)
+              InkWell(
+                onTap: () => _showSectionCountDialog(context, viewModel),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isLandscape ? 10 : 15, vertical: 5),
+                  child: Text('${viewModel.sectionCount}줄',
+                    style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: isLandscape ? 22 : 28)),
+                ),
               ),
-            ),
-            
-            const SizedBox(width: 25),
-            
-            _smallCircleButton('+', () {
-              if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
-            }, isDarkMode, onLongPress: () => _startAutoIncrement(true, viewModel), onLongPressEnd: _stopAutoIncrement),
-          ],
-        ),
-        const SizedBox(height: 25),
-        NeonButton(text: 'START', width: 140, height: 45, color: isDarkMode ? NeonColors.hotPink : const Color(0xFF1A237E), onPressed: () => _startAll(viewModel)),
-      ],
+              
+              SizedBox(width: isLandscape ? 15 : 25),
+              
+              _smallCircleButton('+', () {
+                SoundManager().playTick();
+                if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
+              }, isDarkMode, onLongPress: () => _startAutoIncrement(true, viewModel), onLongPressEnd: _stopAutoIncrement),
+            ],
+          ),
+          SizedBox(height: isLandscape ? 12 : 25),
+          NeonButton(
+            text: 'START',
+            width: isLandscape ? 120 : 140,
+            height: isLandscape ? 38 : 45,
+            color: isDarkMode ? NeonColors.hotPink : const Color(0xFF1A237E),
+            onPressed: () => _startAll(viewModel),
+          ),
+        ],
+      ),
     );
   }
 

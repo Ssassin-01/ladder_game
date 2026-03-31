@@ -4,7 +4,11 @@ import 'core/neon_theme.dart';
 import 'features/home/ladder_home_screen.dart';
 import 'features/ladder_game/ladder_game_view_model.dart';
 
-void main() {
+import 'core/sound_manager.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SoundManager().init();
   runApp(
     MultiProvider(
       providers: [

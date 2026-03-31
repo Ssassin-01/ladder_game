@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/neon_theme.dart';
-import '../../core/neon_button.dart';
+import '../../core/sound_manager.dart';
 import 'ladder_game_mode.dart';
 import 'ladder_game_view_model.dart';
 
@@ -36,8 +39,21 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     with TickerProviderStateMixin {
   late List<AnimationController> _controllers;
   late List<Animation<double>> _animations;
-  final AudioPlayer _audioPlayer = AudioPlayer();
   late List<ResultItem> _sortedResults;
+  final ScreenshotController _screenshotController = ScreenshotController();
+
+  Future<void> _shareScreenshot() async {
+    try {
+      final image = await _screenshotController.capture(delay: const Duration(milliseconds: 10));
+      if (image == null) return;
+      final directory = await getTemporaryDirectory();
+      final imagePath = await File('${directory.path}/ladder_result.png').create();
+      await imagePath.writeAsBytes(image);
+      await Share.shareXFiles([XFile(imagePath.path)], text: '사다리 게임 결과입니다!');
+    } catch (e) {
+      debugPrint("Error sharing: $e");
+    }
+  }
 
   @override
   void initState() {
@@ -82,14 +98,19 @@ class _LadderResultScreenState extends State<LadderResultScreen>
       ]).animate(c);
     }).toList();
 
-    for (var controller in _controllers) {
-      controller.forward();
+    for (int i = 0; i < _controllers.length; i++) {
+      final ctrl = _controllers[i];
+      Future.delayed(Duration(milliseconds: i * 120), () {
+        if (mounted) {
+          ctrl.forward();
+          SoundManager().playPop();
+        }
+      });
     }
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
     for (var c in _controllers) {
       c.dispose();
     }
@@ -108,38 +129,195 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     String titleText = '내기 결과';
     if (isOrderMode) {
       titleText = '최종 순위';
+    } else if (viewModel.currentMode == LadderGameMode.team) {
+      titleText = '팀 나누기 결과';
+    }
+    final bool isTeamMode = viewModel.currentMode == LadderGameMode.team;
+
+    return Screenshot(
+      controller: _screenshotController,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios, color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(titleText,
+            style: TextStyle(
+              color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
+              fontSize: isLandscape ? 20 : 24,
+              fontWeight: FontWeight.bold,
+              shadows: isDarkMode ? NeonColors.getGlow(NeonColors.cyan) : null,
+            )),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.share, color: isDarkMode ? NeonColors.hotPink : NeonColors.solidPink),
+              onPressed: _shareScreenshot,
+            )
+          ],
+        ),
+        body: SafeArea(
+          child: isTeamMode
+            ? _buildTeamModeLayout(isDarkMode, viewModel)
+            : (isOrderMode 
+              ? _buildOrderModeLayout(isDarkMode)
+              : (isLandscape 
+                  ? _buildLandscapeLayout(isDarkMode) 
+                  : _buildPortraitLayout(isDarkMode))),
+        ),
+      ),
+    );
+  }
+
+  // --- 팀 나누기 전용 레이아웃 (팀별 카드 그룹) ---
+  Widget _buildTeamModeLayout(bool isDarkMode, LadderGameViewModel viewModel) {
+    // 팀별로 결과를 그룹화
+    final Map<String, List<ResultItem>> teamGroups = {};
+    for (final r in widget.results) {
+      // "1팀", "2팀 팀장 👑", "2팀 팀원" 등에서 팀 번호 추출
+      final match = RegExp(r'^(\d+)팀').firstMatch(r.text);
+      final key = match != null ? '${match.group(1)}팀' : r.text;
+      teamGroups.putIfAbsent(key, () => []).add(r);
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(titleText,
-          style: TextStyle(
-            color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-            fontSize: isLandscape ? 20 : 24,
-            fontWeight: FontWeight.bold,
-            shadows: isDarkMode ? NeonColors.getGlow(NeonColors.cyan) : null,
-          )),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: isOrderMode 
-          ? _buildOrderModeLayout(isDarkMode)
-          : (isLandscape 
-              ? _buildLandscapeLayout(isDarkMode) 
-              : _buildPortraitLayout(isDarkMode)),
-      ),
+    // 팀 번호 기준으로 정렬
+    final sortedKeys = teamGroups.keys.toList()
+      ..sort((a, b) {
+        final na = int.tryParse(a.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+        final nb = int.tryParse(b.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+        return na.compareTo(nb);
+      });
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      itemCount: sortedKeys.length,
+      itemBuilder: (_, teamIdx) {
+        final teamKey = sortedKeys[teamIdx];
+        final members = teamGroups[teamKey]!;
+        final teamNum = int.tryParse(teamKey.replaceAll(RegExp(r'[^0-9]'), '')) ?? (teamIdx + 1);
+        final teamColor = LadderGameViewModel.teamColors[(teamNum - 1) % LadderGameViewModel.teamColors.length];
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: ScaleTransition(
+            scale: teamIdx < _animations.length ? _animations[teamIdx] : const AlwaysStoppedAnimation(1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: teamColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: teamColor, width: 2),
+                boxShadow: [
+                  BoxShadow(color: teamColor.withAlpha(80), blurRadius: 12, spreadRadius: 1),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 팀 헤더
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: teamColor.withAlpha(40),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8, height: 24,
+                          decoration: BoxDecoration(
+                            color: teamColor,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [BoxShadow(color: teamColor.withAlpha(180), blurRadius: 6)],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          teamKey,
+                          style: TextStyle(
+                            color: teamColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            shadows: [Shadow(color: teamColor.withAlpha(200), blurRadius: 8)],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${members.length}명',
+                          style: TextStyle(color: teamColor.withAlpha(180), fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 팀원 목록
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: members.map((member) {
+                        final isLeader = member.text.contains('팀장');
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isLeader ? teamColor.withAlpha(50) : Colors.white10,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isLeader ? teamColor : Colors.white24,
+                              width: isLeader ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(member.emoji, style: const TextStyle(fontSize: 20)),
+                              const SizedBox(width: 6),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    member.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  if (isLeader)
+                                    Text(
+                                      '팀장 👑',
+                                      style: TextStyle(
+                                        color: teamColor,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   // --- 순서 모드 전용 레이아웃 (타임라인/랭킹 보드 스타일) ---
   Widget _buildOrderModeLayout(bool isDarkMode) {
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       itemCount: _sortedResults.length,

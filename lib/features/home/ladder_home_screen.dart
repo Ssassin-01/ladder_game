@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+
 import '../../core/neon_theme.dart';
 import '../ladder_game/ladder_game_mode.dart';
 import '../ladder_game/ladder_settings_screen.dart';
@@ -36,31 +36,18 @@ class _LadderHomeScreenState extends State<LadderHomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDarkMode = themeProvider.isDarkMode;
-
     return Scaffold(
       body: Stack(
         children: [
           Container(
             width: double.infinity,
-            decoration: BoxDecoration(
-              color:
-                  isDarkMode
-                      ? NeonColors.backgroundBlack
-                      : const Color(0xFFF8F9FA),
-              gradient:
-                  isDarkMode
-                      ? const RadialGradient(
-                        center: Alignment.topCenter,
-                        radius: 1.5,
-                        colors: [Color(0xFF000814), NeonColors.backgroundBlack],
-                      )
-                      : const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Color(0xFFFFFFFF), Color(0xFFF0F2F5)],
-                      ),
+            decoration: const BoxDecoration(
+              color: NeonColors.backgroundBlack,
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.5,
+                colors: [Color(0xFF000814), NeonColors.backgroundBlack],
+              ),
             ),
             child: SafeArea(
               child: SingleChildScrollView(
@@ -73,34 +60,25 @@ class _LadderHomeScreenState extends State<LadderHomeScreen>
                       opacity: _controller,
                       child: Column(
                         children: [
-                          Text(
+                          const Text(
                             '사다리 게임',
                             style: TextStyle(
                               fontSize: 42,
                               fontWeight: FontWeight.w900,
-                              color:
-                                  isDarkMode
-                                      ? Colors.white
-                                      : const Color(0xFF1A237E),
+                              color: Colors.white,
                               letterSpacing: -1.5,
                               height: 1.0,
                             ),
                           ),
                           Text(
-                            '마스터',
+                            '내기 한 판 ㄱ?',
                             style: TextStyle(
-                              fontSize: 48,
+                              fontSize: 32,
                               fontWeight: FontWeight.w900,
-                              color:
-                                  isDarkMode
-                                      ? NeonColors.cyan
-                                      : const Color(0xFF1A237E),
+                              color: NeonColors.cyan,
                               letterSpacing: -1.0,
                               height: 1.1,
-                              shadows:
-                                  isDarkMode
-                                      ? NeonColors.getGlow(NeonColors.cyan)
-                                      : null,
+                              shadows: NeonColors.getGlow(NeonColors.cyan),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -108,26 +86,9 @@ class _LadderHomeScreenState extends State<LadderHomeScreen>
                             width: 40,
                             height: 4,
                             decoration: BoxDecoration(
-                              color:
-                                  isDarkMode
-                                      ? NeonColors.hotPink
-                                      : const Color(0xFF1A237E),
+                              color: NeonColors.hotPink,
                               borderRadius: BorderRadius.circular(2),
-                              boxShadow:
-                                  isDarkMode
-                                      ? NeonColors.getGlow(NeonColors.hotPink)
-                                      : null,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            '오늘의 운명은 누구에게?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w300,
-                              color:
-                                  isDarkMode ? Colors.white70 : Colors.black54,
-                              letterSpacing: 2.0,
+                              boxShadow: NeonColors.getGlow(NeonColors.hotPink),
                             ),
                           ),
                         ],
@@ -175,20 +136,34 @@ class _LadderHomeScreenState extends State<LadderHomeScreen>
                               Expanded(
                                 child: _buildModeButton(
                                   context,
-                                  LadderGameMode.order,
-                                  NeonColors.limeGreen,
+                                  LadderGameMode.team,
+                                  NeonColors.limeGreen, // or any color you'd like
                                   delay: 0.5,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _buildModeButton(
-                            context,
-                            LadderGameMode.manual,
-                            Colors.white,
-                            isFullWidth: true,
-                            delay: 0.6,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildModeButton(
+                                  context,
+                                  LadderGameMode.order,
+                                  NeonColors.electricYellow, // reused color
+                                  delay: 0.6,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildModeButton(
+                                  context,
+                                  LadderGameMode.manual,
+                                  Colors.white,
+                                  delay: 0.7,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -199,51 +174,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen>
               ),
             ),
           ),
-          // 우측 상단 테마 토글 버튼
-          Positioned(
-            top: 10,
-            right: 16,
-            child: SafeArea(
-              child: FadeTransition(
-                opacity: _controller,
-                child: _buildIconCircle(
-                  isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                  () => themeProvider.toggleTheme(),
-                  isDarkMode,
-                ),
-              ),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildIconCircle(IconData icon, VoidCallback onTap, bool isDarkMode) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isDarkMode ? const Color(0xFF121212) : Colors.white,
-          border: Border.all(
-            color: isDarkMode ? Colors.white12 : Colors.black12,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          color: isDarkMode ? Colors.white70 : Colors.black87,
-          size: 24,
-        ),
       ),
     );
   }
@@ -294,8 +225,6 @@ class _ModeButtonContentState extends State<_ModeButtonContent> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) => setState(() => _isPressed = false),
@@ -324,34 +253,22 @@ class _ModeButtonContentState extends State<_ModeButtonContent> {
         child: Container(
           height: widget.isFullWidth ? 70 : 130,
           decoration: BoxDecoration(
-            color:
-                isDarkMode ? const Color(0xFF111111) : const Color(0xFF1A237E),
+            color: const Color(0xFF111111),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color:
-                  isDarkMode
-                      ? widget.accentColor.withOpacity(0.4)
-                      : Colors.white.withOpacity(0.1),
+              color: widget.accentColor.withOpacity(0.4),
               width: 1.5,
             ),
             boxShadow: [
-              if (isDarkMode)
                 BoxShadow(
                   color: widget.accentColor.withOpacity(0.15),
                   blurRadius: 15,
                   spreadRadius: -2,
                 )
-              else
-                BoxShadow(
-                  color: const Color(0xFF1A237E).withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
             ],
           ),
           child: Stack(
             children: [
-              if (isDarkMode)
                 Positioned(
                   right: -10,
                   top: -10,

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,9 +14,24 @@ class Participant {
     required this.animalType,
     required this.emoji,
     required this.color,
+    this.customName,
   });
 
   String get displayName => customName ?? animalType;
+
+  Map<String, dynamic> toJson() => {
+    'animalType': animalType,
+    'emoji': emoji,
+    'color': color.value,
+    'customName': customName,
+  };
+
+  factory Participant.fromJson(Map<String, dynamic> json) => Participant(
+    animalType: json['animalType'],
+    emoji: json['emoji'],
+    color: Color(json['color']),
+    customName: json['customName'],
+  );
 }
 
 class LadderBar {
@@ -45,6 +61,22 @@ class LadderGameViewModel extends ChangeNotifier {
   int _speedLevel = 3;
   int get speedLevel => _speedLevel;
 
+  // 팀 나누기 전용 설정
+  int _teamCount = 2;
+  int get teamCount => _teamCount;
+  bool _hasTeamLeader = false;
+  bool get hasTeamLeader => _hasTeamLeader;
+
+  // 팀 컬러 팔레트 (최대 6팀)
+  static const List<Color> teamColors = [
+    Color(0xFFFF007F), // 핫핑크
+    Color(0xFF00FFFF), // 시안
+    Color(0xFFFFFF00), // 옐로우
+    Color(0xFF7FFF00), // 라임
+    Color(0xFFFF8C00), // 오렌지
+    Color(0xFFBF00FF), // 퍼플
+  ];
+
   final List<Participant> _allAvailableParticipants = [
     Participant(animalType: '사자', emoji: '🦁', color: Colors.orangeAccent),
     Participant(animalType: '고양이', emoji: '🐱', color: Colors.pinkAccent),
@@ -67,6 +99,8 @@ class LadderGameViewModel extends ChangeNotifier {
     Participant(animalType: '코끼리', emoji: '🐘', color: Colors.blueAccent),
     Participant(animalType: '말', emoji: '🐴', color: Colors.tealAccent),
   ];
+
+  List<Participant> get allAvailableParticipants => _allAvailableParticipants;
 
   List<Participant> _currentParticipants = [];
   List<Participant> get currentParticipants => _currentParticipants;
@@ -112,6 +146,10 @@ class LadderGameViewModel extends ChangeNotifier {
     } else if (mode == LadderGameMode.treat) {
       _penaltyCount = 1;
       _penaltyContents = ['내가 쏜다! ☕'];
+    } else if (mode == LadderGameMode.team) {
+      _teamCount = 2;
+      _penaltyCount = 2;
+      _penaltyContents = ['1팀', '2팀'];
     } else if (mode == LadderGameMode.manual) {
       _penaltyCount = _playerCount;
       _penaltyContents = List.generate(_playerCount, (i) => '');
@@ -120,8 +158,46 @@ class LadderGameViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 팀 나누기 전용: 팀 수 설정
+  void setTeamCount(int count) {
+    _teamCount = count.clamp(2, (_playerCount / 1).floor());
+    _penaltyCount = _teamCount;
+    // 팀 라벨 재구성
+    _penaltyContents = List.generate(_teamCount, (i) => '${i + 1}팀');
+    _generateResults();
+    notifyListeners();
+  }
+
+  // 팀 나누기 전용: 팀장 유무 토글
+  void setHasTeamLeader(bool value) {
+    _hasTeamLeader = value;
+    _generateResults();
+    notifyListeners();
+  }
+
+  // 특정 참가자 아이콘 변경
+  void changeParticipantAnimal(int index, Participant newAnimal) {
+    if (index >= 0 && index < _currentParticipants.length) {
+      _currentParticipants[index] = Participant(
+        animalType: newAnimal.animalType,
+        emoji: newAnimal.emoji,
+        color: newAnimal.color,
+        customName: _currentParticipants[index].customName,
+      );
+      notifyListeners();
+    }
+  }
+
+  // 특정 참가자 커스텀 이름 변경
+  void updateParticipantName(int index, String name) {
+    if (index >= 0 && index < _currentParticipants.length) {
+      _currentParticipants[index].customName = name.trim().isNotEmpty ? name.trim() : null;
+      notifyListeners();
+    }
+  }
+
   void setPenaltyCount(int count) {
-    _penaltyCount = count.clamp(1, _playerCount); // manual 모드를 위해 최대치를 _playerCount로 변경
+    _penaltyCount = count.clamp(1, _playerCount); // manual/team 모드를 위해 최대치를 _playerCount로 
     // 내용 리스트 길이 조정
     String defaultText = '벌칙';
     String emoji = '💀';
@@ -135,13 +211,19 @@ class LadderGameViewModel extends ChangeNotifier {
     } else if (_currentMode == LadderGameMode.manual) {
       defaultText = '';
       emoji = '';
+    } else if (_currentMode == LadderGameMode.team) {
+      defaultText = '';
+      emoji = '팀';
     }
 
     if (_penaltyContents.length < _penaltyCount) {
       _penaltyContents.addAll(
         List.generate(
           _penaltyCount - _penaltyContents.length,
-          (i) => defaultText.isEmpty ? '' : '$defaultText ${_penaltyContents.length + i + 1} $emoji',
+          (i) {
+             if (_currentMode == LadderGameMode.team) return '${_penaltyContents.length + i + 1}팀';
+             return defaultText.isEmpty ? '' : '$defaultText ${_penaltyContents.length + i + 1} $emoji';
+          }
         ),
       );
     } else if (_penaltyContents.length > _penaltyCount) {
@@ -166,9 +248,23 @@ class LadderGameViewModel extends ChangeNotifier {
     }
   }
 
-  void _initData() {
-    _currentParticipants =
-        _allAvailableParticipants.take(_playerCount).toList();
+  void _initData({bool keepParticipants = false}) {
+    if (!keepParticipants) {
+       List<Participant> newParticipants = [];
+       for(int i=0; i<_playerCount; i++) {
+           if (i < _currentParticipants.length) {
+               newParticipants.add(_currentParticipants[i]);
+           } else {
+               newParticipants.add(Participant(
+                   animalType: _allAvailableParticipants[i % _allAvailableParticipants.length].animalType,
+                   emoji: _allAvailableParticipants[i % _allAvailableParticipants.length].emoji,
+                   color: _allAvailableParticipants[i % _allAvailableParticipants.length].color,
+               ));
+           }
+       }
+       _currentParticipants = newParticipants;
+    }
+
     if (_currentMode == LadderGameMode.manual) {
       _penaltyCount = _playerCount;
       if (_penaltyContents.length != _playerCount) {
@@ -177,6 +273,43 @@ class LadderGameViewModel extends ChangeNotifier {
     }
     _generateResults();
     _generateLadder();
+  }
+
+  Future<void> saveCurrentParticipants(String listName) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedNames = prefs.getStringList('savedLists') ?? [];
+    if (!savedNames.contains(listName)) {
+      savedNames.add(listName);
+      await prefs.setStringList('savedLists', savedNames);
+    }
+    String jsonStr = jsonEncode(_currentParticipants.map((p) => p.toJson()).toList());
+    await prefs.setString('list_$listName', jsonStr);
+    notifyListeners();
+  }
+
+  Future<List<String>> getSavedLists() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('savedLists') ?? [];
+  }
+
+  Future<void> loadParticipantList(String listName) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? jsonStr = prefs.getString('list_$listName');
+    if (jsonStr != null) {
+      List<dynamic> jsonList = jsonDecode(jsonStr);
+      _currentParticipants = jsonList.map((j) => Participant.fromJson(j)).toList();
+      _playerCount = _currentParticipants.length;
+      setPlayerCount(_playerCount); // This will call _initData() and keep old sizes. But we want to overwrite it because we just loaded it.
+    }
+  }
+
+  Future<void> deleteParticipantList(String listName) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedNames = prefs.getStringList('savedLists') ?? [];
+    savedNames.remove(listName);
+    await prefs.setStringList('savedLists', savedNames);
+    await prefs.remove('list_$listName');
+    notifyListeners();
   }
 
   void _generateResults() {
@@ -222,6 +355,24 @@ class LadderGameViewModel extends ChangeNotifier {
       case LadderGameMode.order:
         List<String> results = List.generate(_playerCount, (i) => '${i + 1}번째');
         results.shuffle(); // 순서 결과를 무작위로 섞음
+        _bottomResults = results;
+        return;
+      case LadderGameMode.team:
+        // 팀 나누기: 홀수 처리는 앞 팀부터 1명씩 추가
+        List<String> results = [];
+        int baseSize = _playerCount ~/ _penaltyCount;
+        int remainder = _playerCount % _penaltyCount;
+        for (int i = 0; i < _penaltyCount; i++) {
+          int teamSize = baseSize + (i < remainder ? 1 : 0);
+          if (_hasTeamLeader) {
+            // 팀장 1명 + 나머지는 팀원
+            results.add('${i + 1}팀 팀장 👑');
+            results.addAll(List.generate(teamSize - 1, (_) => '${i + 1}팀 팀원'));
+          } else {
+            results.addAll(List.generate(teamSize, (_) => '${i + 1}팀'));
+          }
+        }
+        results.shuffle();
         _bottomResults = results;
         return;
       case LadderGameMode.manual:
