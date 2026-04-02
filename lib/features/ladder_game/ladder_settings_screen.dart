@@ -45,7 +45,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     }
     _penaltyControllers.clear();
     for (var content in contents) {
-      _penaltyControllers.add(TextEditingController(text: content));
+      _penaltyControllers.add(TextEditingController(text: content)..addListener(() => setState(() {})));
     }
     setState(() {});
   }
@@ -173,7 +173,24 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
             shadows: isDarkMode ? NeonColors.getGlow(NeonColors.cyan) : null,
           ),
         ),
-
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.refresh,
+              color: isDarkMode ? NeonColors.hotPink : NeonColors.solidPink,
+            ),
+            onPressed: () {
+              SoundManager().playTick();
+              viewModel.resetSettings();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('설정이 초기화되었습니다.'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -324,14 +341,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
             ),
           ],
         ),
-        if (viewModel.hasTeamLeader)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '각 팀에서 1명이 팀장으로 추첨됩니다.\n요췸 인원이 팀원보다 적으면 팀장만 나올 수 있어요.',
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-          ),
       ],
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class NeonColors {
   // 기본 네온 컬러 (Hex Codes)
@@ -36,6 +37,7 @@ class ThemeProvider extends ChangeNotifier {
     brightness: Brightness.dark,
     scaffoldBackgroundColor: NeonColors.backgroundBlack,
     primaryColor: NeonColors.cyan,
+    textTheme: GoogleFonts.notoSansKrTextTheme(ThemeData.dark().textTheme),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: NeonColors.darkCharcoal,
       contentTextStyle: TextStyle(color: Colors.white),

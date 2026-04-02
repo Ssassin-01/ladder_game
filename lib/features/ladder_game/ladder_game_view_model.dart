@@ -114,7 +114,7 @@ class LadderGameViewModel extends ChangeNotifier {
   int _sectionCount = 10;
   int get sectionCount => _sectionCount;
 
-  LadderGameViewModel({int initialCount = 4}) : _playerCount = initialCount {
+  LadderGameViewModel({int initialCount = 5}) : _playerCount = initialCount {
     _initData();
     _loadSettings();
   }
@@ -246,6 +246,24 @@ class LadderGameViewModel extends ChangeNotifier {
       _generateResults();
       notifyListeners();
     }
+  }
+
+  // 모든 설정을 기본값(5명, 속도 3, 모드별 기본 내용 등)으로 초기화
+  void resetSettings() {
+    _playerCount = 5;
+    _speedLevel = 3;
+    _isShroudActive = true;
+    _hasTeamLeader = false;
+    _teamCount = 2;
+
+    // 참가자 명단도 초기화 (명단 불러오기 등으로 바뀐 데이터 복원)
+    _currentParticipants.clear();
+    _initData(keepParticipants: false);
+    
+    // 현재 모드에 맞춰 데이터 재초기화
+    setMode(_currentMode);
+    _saveSettings();
+    notifyListeners();
   }
 
   void _initData({bool keepParticipants = false}) {

@@ -212,7 +212,18 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
             borderRadius: BorderRadius.circular(20),
             side: const BorderSide(color: Colors.orangeAccent, width: 2),
           ),
-          title: const Text('명단 불러오기', style: TextStyle(color: Colors.orangeAccent)),
+          title: Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.white54, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              const Text('명단 불러오기', style: TextStyle(color: Colors.orangeAccent)),
+            ],
+          ),
           content: SizedBox(
             width: double.maxFinite,
             height: 300,
@@ -247,12 +258,6 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                     },
                   ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소', style: TextStyle(color: Colors.white54)),
-            ),
-          ],
         );
       },
     );
@@ -293,16 +298,25 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Row(
                 children: [
-                  Text(
-                    '참가자 명단 관리',
-                    style: TextStyle(
-                      color: NeonColors.cyan,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      shadows: NeonColors.getGlow(NeonColors.cyan),
+                  IconButton(
+                    onPressed: _saveAndClose,
+                    icon: const Icon(Icons.arrow_back_ios, size: 20, color: NeonColors.cyan),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '참가자 명단 관리',
+                      style: TextStyle(
+                        color: NeonColors.cyan,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        shadows: NeonColors.getGlow(NeonColors.cyan),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
                   // 인원 증감 버튼
                   _buildCountButton(Icons.remove, () {
                     if (viewModel.playerCount > 2) {
@@ -441,15 +455,6 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton.icon(
-                      onPressed: _saveAndClose,
-                      icon: const Icon(Icons.arrow_back_ios, size: 16, color: Colors.white70),
-                      label: const Text('되돌아 가기', style: TextStyle(color: Colors.white70)),
-                    ),
                   ),
                 ],
               ),

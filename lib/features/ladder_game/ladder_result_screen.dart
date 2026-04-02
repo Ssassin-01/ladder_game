@@ -69,6 +69,11 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         int bNum = int.tryParse(b.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 999;
         return aNum.compareTo(bNum);
       } else {
+        final aLeader = a.text.contains('팀장');
+        final bLeader = b.text.contains('팀장');
+        if (aLeader && !bLeader) return -1;
+        if (!aLeader && bLeader) return 1;
+
         final aPass = a.text.contains('통과') || a.text.contains('꽝') || a.text.contains('얻어먹기');
         final bPass = b.text.contains('통과') || b.text.contains('꽝') || b.text.contains('얻어먹기');
         if (!aPass && bPass) return -1;
@@ -198,6 +203,16 @@ class _LadderResultScreenState extends State<LadderResultScreen>
       itemBuilder: (_, teamIdx) {
         final teamKey = sortedKeys[teamIdx];
         final members = teamGroups[teamKey]!;
+        
+        // 팀 내에서 팀장이 맨 앞에 오도록 강제 정렬
+        members.sort((a, b) {
+          final aIsLeader = a.text.contains('팀장');
+          final bIsLeader = b.text.contains('팀장');
+          if (aIsLeader && !bIsLeader) return -1;
+          if (!aIsLeader && bIsLeader) return 1;
+          return 0;
+        });
+        
         final teamNum = int.tryParse(teamKey.replaceAll(RegExp(r'[^0-9]'), '')) ?? (teamIdx + 1);
         final teamColor = LadderGameViewModel.teamColors[(teamNum - 1) % LadderGameViewModel.teamColors.length];
 
@@ -492,7 +507,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     final subResults = _sortedResults.where((r) => 
         (r.text.contains('통과') || r.text.contains('꽝') || r.text.contains('얻어먹기'))).toList();
 
-    String subTitle = '축하합니다! 살아남은 인원';
+    String subTitle = '살아남은 인원';
     if (isWinMode) {
       subTitle = '아쉬운 결과';
     } else if (isTreatMode) {
@@ -530,7 +545,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     if (isWinMode) {
       statusColor = Colors.amber;
       titleIcon = '🎉';
-      titleText = '축하합니다! 당첨';
+      titleText = '당첨 결과';
     } else if (isTreatMode) {
       statusColor = Colors.orange;
       titleIcon = '💸';
