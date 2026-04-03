@@ -593,9 +593,19 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(color: statusColor.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                child: Text(result.text, textAlign: TextAlign.center,
-                  style: TextStyle(color: isDarkMode ? Colors.white : (isWinMode || isTreatMode || isOrderMode ? (isDarkMode ? Colors.white : Colors.blueGrey[800]) : statusColor), 
-                  fontSize: compact ? 22 : 28, fontWeight: FontWeight.w900)),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    result.text, 
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : (isWinMode || isTreatMode || isOrderMode ? (isDarkMode ? Colors.white : Colors.blueGrey[800]) : statusColor), 
+                      fontSize: compact ? 22 : 28, 
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

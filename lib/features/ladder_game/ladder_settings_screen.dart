@@ -76,25 +76,52 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     });
   }
 
-  void _addPenaltyField(int maxCount) {
+  void _addPenaltyField(int maxCount, {bool isManualMode = false, LadderGameViewModel? viewModel}) {
+    if (isManualMode && viewModel != null) {
+      if (viewModel.playerCount < 20) {
+        viewModel.setPlayerCount(viewModel.playerCount + 1);
+        _addController();
+      } else {
+        _stopTimer();
+      }
+      return;
+    }
+
     if (_penaltyControllers.length < maxCount) {
-      setState(() {
-        _penaltyControllers.add(TextEditingController());
-      });
+      _addController();
     } else {
       _stopTimer();
     }
   }
 
-  void _removePenaltyField(int index) {
+  void _addController() {
+    setState(() {
+      _penaltyControllers.add(TextEditingController());
+    });
+  }
+
+  void _removePenaltyField(int index, {bool isManualMode = false, LadderGameViewModel? viewModel}) {
     if (_penaltyControllers.length > 1) {
-      setState(() {
-        _penaltyControllers[index].dispose();
-        _penaltyControllers.removeAt(index);
-      });
+      if (isManualMode && viewModel != null) {
+        if (viewModel.playerCount > 2) {
+          viewModel.setPlayerCount(viewModel.playerCount - 1);
+          _removeController(index);
+        } else {
+          _stopTimer();
+        }
+      } else {
+        _removeController(index);
+      }
     } else {
       _stopTimer();
     }
+  }
+
+  void _removeController(int index) {
+    setState(() {
+      _penaltyControllers[index].dispose();
+      _penaltyControllers.removeAt(index);
+    });
   }
 
   @override
@@ -182,12 +209,17 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
             onPressed: () {
               SoundManager().playTick();
               viewModel.resetSettings();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('설정이 초기화되었습니다.'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              
+              // 텍스트 컨트롤러들도 초기화
+              setState(() {
+                for (var controller in _penaltyControllers) {
+                  controller.dispose();
+                }
+                _penaltyControllers.clear();
+                for (int i = 0; i < viewModel.penaltyCount; i++) {
+                  _penaltyControllers.add(TextEditingController());
+                }
+              });
             },
           ),
         ],
@@ -507,6 +539,13 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 accentColor,
                 isDarkMode,
               ),
+            if (isManualMode)
+              _longPressCircleButton(
+                Icons.add_circle,
+                () => _addPenaltyField(20, isManualMode: true, viewModel: viewModel),
+                accentColor,
+                isDarkMode,
+              ),
           ],
         ),
         const SizedBox(height: 10),
@@ -552,10 +591,14 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                       ),
                     ),
                   ),
-                  if (!isManualMode && _penaltyControllers.length > 1)
+                  if ((!isManualMode && _penaltyControllers.length > 1) || (isManualMode && _penaltyControllers.length > 2))
                     _longPressCircleButton(
                       Icons.remove_circle_outline,
-                      () => _removePenaltyField(index),
+                      () => _removePenaltyField(
+                        index, 
+                        isManualMode: isManualMode, 
+                        viewModel: isManualMode ? viewModel : null
+                      ),
                       Colors.redAccent,
                       isDarkMode,
                       size: 22,

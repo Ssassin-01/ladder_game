@@ -336,7 +336,7 @@ class LadderGameViewModel extends ChangeNotifier {
     switch (_currentMode) {
       case LadderGameMode.penalty:
         // 설정된 벌칙자 수만큼 벌칙 내용을 배치하고 나머지는 '통과'
-        List<String> results = List.generate(_playerCount, (i) => '통과 ✨');
+        List<String> results = List.generate(_playerCount, (i) => '통과 🎈');
         List<int> indices = List.generate(_playerCount, (i) => i);
         indices.shuffle();
 
