@@ -49,6 +49,10 @@ class LadderGameViewModel extends ChangeNotifier {
   LadderGameMode _currentMode = LadderGameMode.penalty;
   LadderGameMode get currentMode => _currentMode;
 
+  // 모드별 설정을 저장하기 위한 맵
+  final Map<LadderGameMode, int> _modeCounts = {};
+  final Map<LadderGameMode, List<String>> _modeContents = {};
+
   int _penaltyCount = 1;
   int get penaltyCount => _penaltyCount;
 
@@ -114,7 +118,7 @@ class LadderGameViewModel extends ChangeNotifier {
   int _sectionCount = 10;
   int get sectionCount => _sectionCount;
 
-  LadderGameViewModel({int initialCount = 5}) : _playerCount = initialCount {
+  LadderGameViewModel({int initialCount = 4}) : _playerCount = initialCount {
     _initData();
     _loadSettings();
   }
@@ -134,28 +138,63 @@ class LadderGameViewModel extends ChangeNotifier {
     await prefs.setInt('speedLevel', _speedLevel);
   }
 
-  void setMode(LadderGameMode mode) {
+  void setMode(LadderGameMode mode, {bool force = false}) {
+    // 이미 같은 모드이고 데이터가 있으면 정합성만 체크하고 조기 리턴
+    if (!force && _currentMode == mode && _penaltyContents.isNotEmpty) {
+      _ensureMinimumItemCount();
+      return;
+    }
+
+    // 대기 중이던 현재 데이터를 이전 모드용 맵에 백업 (단, 비어있지 않을 때만)
+    if (_penaltyContents.isNotEmpty) {
+      _modeCounts[_currentMode] = _penaltyCount;
+      _modeContents[_currentMode] = List.from(_penaltyContents);
+    }
+
     _currentMode = mode;
-    // 모드 변경 시 초기화
+
+    // 새로운 모드의 설정을 불러오거나 새로운 기본값 할당
+    if (_modeCounts.containsKey(mode) && _modeContents[mode] != null && _modeContents[mode]!.isNotEmpty) {
+      _penaltyCount = _modeCounts[mode]!;
+      _penaltyContents = List.from(_modeContents[mode]!);
+    } else {
+      _initNewModeDefaults(mode);
+    }
+
+    // 최종 정합성 체크: 순서 모드를 제외하고 항상 최소 1개는 있어야 함
+    _ensureMinimumItemCount();
+
+    _generateResults();
+    notifyListeners();
+  }
+
+  void _ensureMinimumItemCount() {
+    if (_currentMode != LadderGameMode.order && _penaltyContents.isEmpty) {
+      _initNewModeDefaults(_currentMode);
+    }
+  }
+
+  void _initNewModeDefaults(LadderGameMode mode) {
     if (mode == LadderGameMode.penalty) {
       _penaltyCount = 1;
-      _penaltyContents = ['벌칙 💀'];
+      _penaltyContents = ['벌칙 1 💀'];
     } else if (mode == LadderGameMode.win) {
       _penaltyCount = 1;
-      _penaltyContents = ['당첨 🎁'];
+      _penaltyContents = ['당첨 1 🎁'];
     } else if (mode == LadderGameMode.treat) {
       _penaltyCount = 1;
-      _penaltyContents = ['내가 쏜다! ☕'];
+      _penaltyContents = ['내가 쏜다! 1 ☕'];
     } else if (mode == LadderGameMode.team) {
       _teamCount = 2;
       _penaltyCount = 2;
       _penaltyContents = ['1팀', '2팀'];
     } else if (mode == LadderGameMode.manual) {
-      _penaltyCount = _playerCount;
-      _penaltyContents = List.generate(_playerCount, (i) => '');
+      _penaltyCount = 1;
+      _penaltyContents = ['내용 입력 ✨'];
+    } else if (mode == LadderGameMode.order) {
+      _penaltyCount = 0;
+      _penaltyContents = [];
     }
-    _generateResults();
-    notifyListeners();
   }
 
   // 팀 나누기 전용: 팀 수 설정
@@ -217,15 +256,14 @@ class LadderGameViewModel extends ChangeNotifier {
     }
 
     if (_penaltyContents.length < _penaltyCount) {
-      _penaltyContents.addAll(
-        List.generate(
-          _penaltyCount - _penaltyContents.length,
-          (i) {
-             if (_currentMode == LadderGameMode.team) return '${_penaltyContents.length + i + 1}팀';
-             return defaultText.isEmpty ? '' : '$defaultText ${_penaltyContents.length + i + 1} $emoji';
-          }
-        ),
-      );
+      int needed = _penaltyCount - _penaltyContents.length;
+      for (int i = 0; i < needed; i++) {
+        if (_currentMode == LadderGameMode.team) {
+          _penaltyContents.add('${_penaltyContents.length + 1}팀');
+        } else {
+          _penaltyContents.add(defaultText.isEmpty ? '' : '$defaultText ${_penaltyContents.length + 1} $emoji');
+        }
+      }
     } else if (_penaltyContents.length > _penaltyCount) {
       _penaltyContents = _penaltyContents.sublist(0, _penaltyCount);
     }
@@ -250,18 +288,24 @@ class LadderGameViewModel extends ChangeNotifier {
 
   // 모든 설정을 기본값(5명, 속도 3, 모드별 기본 내용 등)으로 초기화
   void resetSettings() {
-    _playerCount = 5;
+    _playerCount = 4;
     _speedLevel = 3;
     _isShroudActive = true;
     _hasTeamLeader = false;
     _teamCount = 2;
 
-    // 참가자 명단도 초기화 (명단 불러오기 등으로 바뀐 데이터 복원)
+    // 모든 캐시 및 현재 데이터 삭제
+    _modeCounts.clear();
+    _modeContents.clear();
+    _penaltyContents.clear();
+
+    // 명시적으로 현재 모드에 대한 기본값 재생성
+    _initNewModeDefaults(_currentMode);
+    
+    // 참가자 명단 초기화 (기본 동물들로 복원)
     _currentParticipants.clear();
     _initData(keepParticipants: false);
     
-    // 현재 모드에 맞춰 데이터 재초기화
-    setMode(_currentMode);
     _saveSettings();
     notifyListeners();
   }
@@ -429,11 +473,11 @@ class LadderGameViewModel extends ChangeNotifier {
         _penaltyContents = _penaltyContents.sublist(0, _playerCount);
       }
     } else {
-      if (_penaltyCount >= _playerCount) {
-        _penaltyCount = _playerCount - 1;
-        if (_penaltyCount < 1) _penaltyCount = 1;
-        _penaltyContents = _penaltyContents.sublist(0, _penaltyCount);
-      }
+    if (_penaltyCount > _playerCount && _currentMode != LadderGameMode.manual) {
+      _penaltyCount = _playerCount - 1;
+      if (_penaltyCount < 1) _penaltyCount = 1;
+      _penaltyContents = _penaltyContents.sublist(0, _penaltyCount);
+    }
     }
     _initData();
     _saveSettings();

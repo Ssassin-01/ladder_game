@@ -7,6 +7,7 @@ import '../../core/widgets/neon_3d_button.dart';
 import 'ladder_game_mode.dart';
 import 'ladder_game_view_model.dart';
 import 'ladder_game_screen.dart';
+import 'participant_manager_dialog.dart';
 
 class LadderSettingsScreen extends StatefulWidget {
   final LadderGameMode mode;
@@ -25,6 +26,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<LadderGameViewModel>();
+      viewModel.setMode(widget.mode);
       _syncControllersWithViewModel(viewModel);
     });
   }
@@ -104,7 +106,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      centerTitle: true,
+      centerTitle: false,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: 20),
         onPressed: () => Navigator.pop(context),
@@ -121,7 +123,9 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
         TextButton.icon(
           onPressed: () {
             viewModel.resetSettings();
-            setState(() => _syncControllersWithViewModel(viewModel));
+            // ViewModel이 notifyListeners를 호출하므로, 여기서 동기화만 해주면 build가 트리거됨
+            _syncControllersWithViewModel(viewModel);
+            setState(() {});
           },
           icon: const Icon(Icons.restart_alt, size: 18, color: NeonColors.primary),
           label: Text(
@@ -162,7 +166,10 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 size: 44,
                 baseColor: NeonColors.pointPink,
                 onPressed: () {
-                  // Existing Participant management logic
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ParticipantManagerDialog(),
+                  );
                 },
                 child: const Icon(Icons.inventory, size: 18, color: NeonColors.shadow),
               ),
@@ -394,7 +401,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.transparent, width: 2),
+                        border: Border.all(color: NeonColors.stroke, width: 2.0),
                       ),
                       child: Row(
                         children: [
@@ -422,7 +429,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
-                      if (_itemControllers.length > 2) {
+                      if (_itemControllers.length > 1) {
                         viewModel.setPenaltyCount(viewModel.penaltyCount - 1);
                         setState(() => _syncControllersWithViewModel(viewModel));
                       }
@@ -467,18 +474,48 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
   Widget _buildFooter() {
     return Column(
       children: [
-        const Opacity(
-          opacity: 0.2,
-          child: Icon(Icons.auto_awesome, size: 100, color: NeonColors.primary),
+        Opacity(
+          opacity: 0.1,
+          child: Icon(_getFooterIcon(widget.mode), size: 100, color: NeonColors.primary),
         ),
         const SizedBox(height: 16),
-        Text(
-          '"정상은 멋지지만, 올라가는 과정이 진짜 재미있죠!"',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.gaegu(fontSize: 17, color: NeonColors.textSub, fontStyle: FontStyle.italic, fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            '"${_getFooterQuote(widget.mode)}"',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.gaegu(
+              fontSize: 18, 
+              color: NeonColors.textSub, 
+              fontStyle: FontStyle.italic, 
+              fontWeight: FontWeight.bold
+            ),
+          ),
         ),
       ],
     );
+  }
+
+  IconData _getFooterIcon(LadderGameMode mode) {
+    switch (mode) {
+      case LadderGameMode.penalty: return Icons.psychology;
+      case LadderGameMode.win: return Icons.celebration;
+      case LadderGameMode.treat: return Icons.restaurant;
+      case LadderGameMode.order: return Icons.linear_scale;
+      case LadderGameMode.team: return Icons.groups;
+      case LadderGameMode.manual: return Icons.auto_fix_high;
+    }
+  }
+
+  String _getFooterQuote(LadderGameMode mode) {
+    switch (mode) {
+      case LadderGameMode.penalty: return "피할 수 없으면 즐겨라! (하지만 이번엔 피하고 싶을걸?)";
+      case LadderGameMode.win: return "우리 중 가장 운 좋은 사람은 누구일까요?";
+      case LadderGameMode.treat: return "지갑은 가볍게, 마음은 즐겁게! 오늘 골든벨은 누가?";
+      case LadderGameMode.order: return "운명은 정해졌습니다. 시작은 당신의 몫!";
+      case LadderGameMode.team: return "최고의 전략은 최고의 팀워크에서 나옵니다!";
+      case LadderGameMode.manual: return "당신만의 규칙으로 게임을 더 즐겁게!";
+    }
   }
 
   void _applyAllChanges(LadderGameViewModel viewModel) {
