@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ladder Master Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#fed3c7",
+                        "on-secondary-container": "#4d5700",
+                        "on-surface": "#383833",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed-dim": "#efcbab",
+                        "on-surface-variant": "#65655f",
+                        "primary-dim": "#6d533a",
+                        "on-tertiary-fixed-variant": "#705147",
+                        "primary": "#7b5f45",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-dim": "#705147",
+                        "on-secondary-fixed": "#3b4300",
+                        "on-primary-fixed": "#503921",
+                        "tertiary-container": "#fed3c7",
+                        "on-secondary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "secondary": "#5f6a00",
+                        "outline-variant": "#bab9b2",
+                        "secondary-container": "#dbec6d",
+                        "surface-variant": "#e9e9de",
+                        "on-tertiary-container": "#65473e",
+                        "surface-container-high": "#efeee5",
+                        "inverse-primary": "#fed9b8",
+                        "primary-container": "#fed9b8",
+                        "error-container": "#f95630",
+                        "surface-tint": "#7b5f45",
+                        "surface-bright": "#fefcf4",
+                        "on-primary": "#ffffff",
+                        "error": "#be2d06",
+                        "error-dim": "#b92902",
+                        "surface-container-low": "#fbf9f1",
+                        "surface-dim": "#e4e3d8",
+                        "on-primary-fixed-variant": "#6f553b",
+                        "on-tertiary-fixed": "#51352c",
+                        "secondary-dim": "#535e00",
+                        "outline": "#81817a",
+                        "surface": "#fefcf4",
+                        "on-error-container": "#520c00",
+                        "on-secondary-fixed-variant": "#566100",
+                        "background": "#fefcf4",
+                        "secondary-fixed": "#dbec6d",
+                        "tertiary-fixed-dim": "#efc6b9",
+                        "secondary-fixed-dim": "#cdde60",
+                        "on-background": "#383833",
+                        "tertiary": "#7d5d53",
+                        "on-primary-container": "#644b32",
+                        "surface-container": "#f5f4eb",
+                        "inverse-on-surface": "#9e9d96",
+                        "inverse-surface": "#0e0f0a",
+                        "surface-container-highest": "#e9e9de",
+                        "primary-fixed": "#fed9b8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        input[type='range']::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #5f6a00;
+            border: 2px solid #7b5f45;
+            cursor: pointer;
+            margin-top: -8px;
+        }
+        input[type='range']::-webkit-slider-runnable-track {
+            height: 8px;
+            background: #dbec6d;
+            border-radius: 9999px;
+        }
+        body {
+            min-height: 100dvh;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-secondary-container">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 px-4 py-3 flex justify-between items-center bg-[#fefcf4] border-b border-surface-variant">
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary active:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline font-bold text-xl text-primary">벌칙 설정</h1>
+</div>
+<button class="flex items-center gap-1 py-2 px-3 rounded-full text-primary hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-[20px]">restart_alt</span>
+<span class="font-headline font-bold text-sm">초기화</span>
+</button>
+</header>
+<main class="pt-24 pb-16 px-6 max-w-2xl mx-auto min-h-screen">
+<div class="rounded-[48px] p-6 space-y-6 bg-surface-container-low shadow-sm">
+<div class="space-y-6">
+<!-- Participant Count Section -->
+<section class="bg-surface-container rounded-xl p-8 shadow-sm border-2 border-[#5D4037] transition-all">
+<div class="flex items-center justify-between mb-6 flex-nowrap gap-4">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-12 h-12 rounded-xl bg-tertiary-container flex items-center justify-center text-tertiary shrink-0">
+<span class="material-symbols-outlined">groups</span>
+</div>
+<h3 class="font-headline font-bold text-xl text-primary">참가자 수</h3>
+</div>
+<!-- Manage List Button -->
+<button class="flex items-center gap-2 py-2 rounded-full bg-tertiary-container text-tertiary font-headline font-bold text-sm hover:scale-105 active:scale-95 transition-all whitespace-nowrap min-w-max w-10 h-10 justify-center"><span class="material-symbols-outlined text-lg">inventory</span></button>
+</div>
+<div class="flex items-center justify-center gap-8">
+<button class="w-16 h-16 rounded-full bg-secondary text-on-secondary border-2 shadow-[0_4px_0px_#7b5f45] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center border-[#5D4037]">
+<span class="material-symbols-outlined text-3xl">remove</span>
+</button>
+<span class="text-5xl font-headline font-black text-secondary min-w-[3rem] text-center">4</span>
+<button class="w-16 h-16 rounded-full bg-secondary text-on-secondary border-2 shadow-[0_4px_0px_#7b5f45] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center border-[#5D4037]">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+</section>
+<!-- Game Speed Section -->
+<section class="bg-surface-container-low rounded-xl p-8 border-2 border-[#5D4037]">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xl text-primary">사다리 속도</h3>
+</div>
+</div>
+<div class="relative px-2">
+<input class="w-full h-2 bg-secondary-container rounded-full appearance-none cursor-pointer accent-secondary" max="10" min="1" type="range" value="5"/>
+<div class="flex justify-between mt-4 font-headline font-bold text-xs text-primary/60 tracking-tighter uppercase">
+<span>느릿느릿</span>
+<span>보통</span>
+<span>빠르게</span>
+</div>
+</div>
+</section>
+<!-- Penalty Text Fields Section -->
+<section class="bg-surface-container-highest rounded-xl p-8 border-2 border-[#5D4037]">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xl text-primary">벌칙 설정</h3>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center group">
+<div class="flex-1 flex items-center bg-surface-container-lowest border-2 border-transparent focus-within:border-primary rounded-lg transition-all overflow-hidden w-full">
+<div class="pl-4 pr-2 font-headline font-bold text-primary shrink-0">1</div>
+<input class="w-full bg-transparent border-0 focus:ring-0 px-2 py-4 font-body text-on-surface placeholder:text-outline outline-none" placeholder="예: 커피 쏘기" type="text" value="모두에게 라떼 쏘기"/>
+</div>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error/10 transition-colors shrink-0">
+<span class="material-symbols-outlined text-xl">remove_circle</span>
+</button>
+</div>
+<div class="flex items-center group">
+<div class="flex-1 flex items-center bg-surface-container-lowest border-2 border-transparent focus-within:border-primary rounded-lg transition-all overflow-hidden w-full">
+<div class="pl-4 pr-2 font-headline font-bold text-primary shrink-0">2</div>
+<input class="w-full bg-transparent border-0 focus:ring-0 px-2 py-4 font-body text-on-surface placeholder:text-outline outline-none" placeholder="예: 팔굽혀펴기 10회" type="text"/>
+</div>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error/10 transition-colors shrink-0">
+<span class="material-symbols-outlined text-xl">remove_circle</span>
+</button>
+</div>
+<!-- Add Penalty Button -->
+<button class="w-full mt-4 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-primary/30 rounded-xl text-primary/60 font-headline font-bold hover:bg-primary/5 hover:border-primary/50 transition-all">
+<span class="material-symbols-outlined">add</span>
+<span>벌칙 추가</span>
+</button>
+</div>
+</section>
+<!-- Action Button -->
+<button class="w-full bg-secondary text-on-secondary font-headline font-bold text-lg py-5 rounded-full border-2 shadow-[0_8px_0px_#7b5f45] active:translate-y-1 active:shadow-[0_4px_0px_#7b5f45] transition-all border-[#5D4037]">
+                게임 시작
+            </button>
+</div>
+</div>
+<!-- Decorative Illustration Element -->
+<div class="relative h-48 mt-12 flex items-center justify-center">
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 opacity-20 pointer-events-none">
+<span class="material-symbols-outlined text-[120px] text-secondary">psychiatry</span>
+</div>
+<p class="text-center text-on-surface-variant font-medium italic max-w-xs">
+            "정상은 멋지지만, 올라가는 과정이 진짜 재미있죠!"
+        </p>
+</div>
+</main>
+</body></html>

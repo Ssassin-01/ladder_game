@@ -2,37 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class NeonColors {
-  // Stitch 'Kawaii & Soft' Palette from home.png and penalty.png
-  static const Color background = Color(0xFFFDFCF0); // Creamy Soft White
-  static const Color primary = Color(0xFF6B8E23); // Olive Green
-  static const Color stroke = Color(0xFF5D4037); // Chocolate Brown
+  // Stitch extracted tokens for Kawaii Ladder
+  static const Color background = Color(0xFFFEFCF4); // Pale Cream
+  static const Color primary = Color(0xFF5F6A00);    // Olive Green
+  static const Color accent = Color(0xFFDBEC6D);     // Light Lime
+  static const Color stroke = Color(0xFF5D4037);     // Dark Chocolate Brown
+  static const Color shadow = Color(0xFF7B5F45);     // Medium Brown (Shadow)
   
-  // Mode specific background colors from Stitch images
-  static const Color modePenalty = Color(0xFFFFAB91); // Peach/Salmon
-  static const Color modeWin = Color(0xFFD4E157); // Lime
-  static const Color modeShoot = Color(0xFFFCE4EC); // Soft Pink
-  static const Color modeOrder = Color(0xFFECEFF1); // Soft Grey
-  static const Color modeTeam = Color(0xFFD4E157); // Lime/Yellow-Green
+  static const Color cardBg = Color(0xFFFBF9F1);     // Surface Container Low
+  static const Color textMain = Color(0xFF383833);   // Dark Charcoal
+  static const Color textSub = Color(0xFF65655F);    // Medium Grey/Taupe
   
-  static const Color surfaceCard = Color(0xFFF5F5F0); // Subtle Beige for cards
-  static const Color textMain = Color(0xFF5D4037); // Dark Brown Text
-  static const Color textSub = Color(0xFF8D6E63);
-  
-  // Compatibility aliases for other screens
-  static const Color secondary = modeWin;
-  static const Color error = Color(0xFFBE2D06); // Standard soft error red
-  
-  static List<BoxShadow> getGlow(Color color) {
-    return [
-      BoxShadow(blurRadius: 4, color: color.withOpacity(0.1)),
-    ];
-  }
+  static const Color pointPink = Color(0xFFFED3C7);  // Tertiary Fixed
+  static const Color pointGreen = Color(0xFFDBEC6D); // Secondary Fixed
+  static const Color pointOrange = Color(0xFFFED9B8); // Primary Fixed
 
-  // 3D Button Effect Shadow
-  static List<BoxShadow> get3DShadow(Color shadowColor) {
+  // ---- Backward Compatibility for Home Screen ----
+  static const Color modePenalty = Color(0xFFFED3C7);
+  static const Color modeWin = Color(0xFFD1E4FF);
+  static const Color modeShoot = Color(0xFFDBEC6D);
+  static const Color modeOrder = Color(0xFFFFD9B8);
+  static const Color modeTeam = Color(0xFFE9E9DE);
+
+  static List<BoxShadow> get3DShadow(Color color) {
     return [
       BoxShadow(
-        color: shadowColor,
+        color: color,
         offset: const Offset(0, 4),
         blurRadius: 0,
       ),
@@ -41,61 +36,52 @@ class NeonColors {
 }
 
 class NeonTheme {
-  static ThemeData get forestTheme {
+  // 3-Card Layout common decoration
+  static BoxDecoration getCardDecoration({double radius = 32.0, Color bg = NeonColors.cardBg}) {
+    return BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: NeonColors.stroke, width: 2.0),
+    );
+  }
+
+  static ThemeData get themeData {
     return ThemeData(
       useMaterial3: true,
+      scaffoldBackgroundColor: NeonColors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: NeonColors.primary,
-        surface: Colors.white,
-        onSurface: NeonColors.textMain,
-        primary: NeonColors.primary,
-        secondary: NeonColors.modeWin,
-        brightness: Brightness.light,
+        surface: NeonColors.cardBg,
       ),
-      scaffoldBackgroundColor: NeonColors.background,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+      cardTheme: const CardThemeData(
+        color: NeonColors.cardBg,
         elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: NeonColors.stroke),
-        titleTextStyle: TextStyle(
-          color: NeonColors.textMain,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        margin: EdgeInsets.all(0),
       ),
       textTheme: GoogleFonts.plusJakartaSansTextTheme().copyWith(
-        displayLarge: GoogleFonts.plusJakartaSans(
-          fontWeight: FontWeight.bold, color: NeonColors.textMain,
+        headlineMedium: const TextStyle(
+          color: NeonColors.textMain,
+          fontWeight: FontWeight.w900,
+          fontSize: 24,
         ),
-        headlineMedium: GoogleFonts.plusJakartaSans(
-          fontWeight: FontWeight.bold, color: NeonColors.textMain,
-        ),
-      ),
-      cardTheme: CardThemeData(
-        color: NeonColors.surfaceCard,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(32),
-          side: const BorderSide(color: Color(0xFFE0E0DB), width: 1.5),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: NeonColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(32),
-          ),
+        titleLarge: const TextStyle(
+          color: NeonColors.textMain,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
       ),
     );
   }
+
+  // Backward compatibility for main.dart
+  static ThemeData get forestTheme => themeData;
 }
 
 class ThemeProvider extends ChangeNotifier {
-  bool get isDarkMode => false;
-  void toggleTheme() {}
-  ThemeData get currentTheme => NeonTheme.forestTheme;
+  ThemeData _currentTheme = NeonTheme.themeData;
+  ThemeData get currentTheme => _currentTheme;
+
+  void toggleTheme() {
+    notifyListeners();
+  }
 }
