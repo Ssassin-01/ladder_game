@@ -64,7 +64,6 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     _sortedResults = List.from(widget.results);
     _sortedResults.sort((a, b) {
       if (isOrderMode) {
-        // "1번째", "2번째" 등에서 숫자만 추출하여 정렬
         int aNum = int.tryParse(a.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 999;
         int bNum = int.tryParse(b.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 999;
         return aNum.compareTo(bNum);
@@ -124,9 +123,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
     final viewModel = context.watch<LadderGameViewModel>();
-    final isDarkMode = themeProvider.isDarkMode;
     final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
     final orientation = MediaQuery.of(context).orientation;
     final isLandscape = orientation == Orientation.landscape;
@@ -142,54 +139,49 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     return Screenshot(
       controller: _screenshotController,
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: const Color(0xFFF9F7F2),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan),
+            icon: const Icon(Icons.arrow_back_ios, color: NeonColors.primary),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(titleText,
             style: TextStyle(
-              color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-              fontSize: isLandscape ? 20 : 24,
+              color: NeonColors.primary,
+              fontSize: isLandscape ? 20 : 22,
               fontWeight: FontWeight.bold,
-              shadows: isDarkMode ? NeonColors.getGlow(NeonColors.cyan) : null,
             )),
           centerTitle: true,
           actions: [
             IconButton(
-              icon: Icon(Icons.share, color: isDarkMode ? NeonColors.hotPink : NeonColors.solidPink),
+              icon: const Icon(Icons.share, color: NeonColors.primary),
               onPressed: _shareScreenshot,
             )
           ],
         ),
         body: SafeArea(
           child: isTeamMode
-            ? _buildTeamModeLayout(isDarkMode, viewModel)
+            ? _buildTeamModeLayout(viewModel)
             : (isOrderMode 
-              ? _buildOrderModeLayout(isDarkMode)
+              ? _buildOrderModeLayout()
               : (isLandscape 
-                  ? _buildLandscapeLayout(isDarkMode) 
-                  : _buildPortraitLayout(isDarkMode))),
+                  ? _buildLandscapeLayout() 
+                  : _buildPortraitLayout())),
         ),
       ),
     );
   }
 
-  // --- 팀 나누기 전용 레이아웃 (팀별 카드 그룹) ---
-  Widget _buildTeamModeLayout(bool isDarkMode, LadderGameViewModel viewModel) {
-    // 팀별로 결과를 그룹화
+  Widget _buildTeamModeLayout(LadderGameViewModel viewModel) {
     final Map<String, List<ResultItem>> teamGroups = {};
     for (final r in widget.results) {
-      // "1팀", "2팀 팀장 👑", "2팀 팀원" 등에서 팀 번호 추출
       final match = RegExp(r'^(\d+)팀').firstMatch(r.text);
       final key = match != null ? '${match.group(1)}팀' : r.text;
       teamGroups.putIfAbsent(key, () => []).add(r);
     }
 
-    // 팀 번호 기준으로 정렬
     final sortedKeys = teamGroups.keys.toList()
       ..sort((a, b) {
         final na = int.tryParse(a.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
@@ -203,8 +195,6 @@ class _LadderResultScreenState extends State<LadderResultScreen>
       itemBuilder: (_, teamIdx) {
         final teamKey = sortedKeys[teamIdx];
         final members = teamGroups[teamKey]!;
-        
-        // 팀 내에서 팀장이 맨 앞에 오도록 강제 정렬
         members.sort((a, b) {
           final aIsLeader = a.text.contains('팀장');
           final bIsLeader = b.text.contains('팀장');
@@ -222,94 +212,82 @@ class _LadderResultScreenState extends State<LadderResultScreen>
             scale: teamIdx < _animations.length ? _animations[teamIdx] : const AlwaysStoppedAnimation(1.0),
             child: Container(
               decoration: BoxDecoration(
-                color: teamColor.withAlpha(20),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: teamColor, width: 2),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: NeonColors.primary, width: 2),
                 boxShadow: [
-                  BoxShadow(color: teamColor.withAlpha(80), blurRadius: 12, spreadRadius: 1),
+                  BoxShadow(color: NeonColors.primary.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 팀 헤더
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: teamColor.withAlpha(40),
+                      color: teamColor.withOpacity(0.1),
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(18),
-                        topRight: Radius.circular(18),
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 8, height: 24,
-                          decoration: BoxDecoration(
-                            color: teamColor,
-                            borderRadius: BorderRadius.circular(4),
-                            boxShadow: [BoxShadow(color: teamColor.withAlpha(180), blurRadius: 6)],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
                         Text(
                           teamKey,
                           style: TextStyle(
                             color: teamColor,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            shadows: [Shadow(color: teamColor.withAlpha(200), blurRadius: 8)],
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const Spacer(),
                         Text(
                           '${members.length}명',
-                          style: TextStyle(color: teamColor.withAlpha(180), fontSize: 14),
+                          style: TextStyle(color: teamColor.withOpacity(0.6), fontSize: 13),
                         ),
                       ],
                     ),
                   ),
-                  // 팀원 목록
                   Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                      spacing: 12,
+                      runSpacing: 12,
                       children: members.map((member) {
                         final isLeader = member.text.contains('팀장');
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: isLeader ? teamColor.withAlpha(50) : Colors.white10,
-                            borderRadius: BorderRadius.circular(12),
+                            color: isLeader ? teamColor.withOpacity(0.05) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isLeader ? teamColor : Colors.white24,
-                              width: isLeader ? 1.5 : 1,
+                              color: isLeader ? teamColor : NeonColors.textSub.withOpacity(0.1),
+                              width: 1.5,
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(member.emoji, style: const TextStyle(fontSize: 20)),
-                              const SizedBox(width: 6),
+                              Text(member.emoji, style: const TextStyle(fontSize: 18)),
+                              const SizedBox(width: 8),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     member.name,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: NeonColors.textMain,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
                                   ),
                                   if (isLeader)
                                     Text(
-                                      '팀장 👑',
+                                      '팀장',
                                       style: TextStyle(
                                         color: teamColor,
-                                        fontSize: 11,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -330,71 +308,61 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  // --- 순서 모드 전용 레이아웃 (타임라인/랭킹 보드 스타일) ---
-  Widget _buildOrderModeLayout(bool isDarkMode) {
-
+  Widget _buildOrderModeLayout() {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       itemCount: _sortedResults.length,
       itemBuilder: (context, index) {
         final result = _sortedResults[index];
         final rankNum = index + 1;
-        final cyanColor = isDarkMode ? NeonColors.cyan : NeonColors.solidCyan;
         
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: ScaleTransition(
             scale: _animations[index],
             child: Container(
-              height: 100,
+              height: 90,
               decoration: BoxDecoration(
-                color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: cyanColor.withOpacity(0.3), width: 2),
-                boxShadow: isDarkMode ? [
-                  BoxShadow(color: cyanColor.withOpacity(0.1), blurRadius: 10, spreadRadius: 1)
-                ] : [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: NeonColors.primary, width: 2),
+                boxShadow: [
+                  BoxShadow(color: NeonColors.primary.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
                 ],
               ),
               child: Row(
                 children: [
-                  // 좌측 순위 숫자 영역
                   Container(
-                    width: 80,
+                    width: 70,
                     decoration: BoxDecoration(
-                      color: cyanColor.withOpacity(0.1),
+                      color: NeonColors.primary.withOpacity(0.05),
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(22),
-                        bottomLeft: Radius.circular(22),
+                        topLeft: Radius.circular(30),
+                        bottomLeft: Radius.circular(30),
                       ),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '$rankNum',
-                      style: TextStyle(
-                        color: cyanColor,
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                        fontStyle: FontStyle.italic,
-                        shadows: isDarkMode ? NeonColors.getGlow(cyanColor) : null,
+                      style: const TextStyle(
+                        color: NeonColors.primary,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 20),
-                  // 중앙 캐릭터 아이콘
+                  const SizedBox(width: 16),
                   Container(
-                    width: 60, height: 60,
+                    width: 50, height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isDarkMode ? Colors.black26 : Colors.grey[100],
-                      border: Border.all(color: result.color.withOpacity(0.5), width: 2),
+                      color: const Color(0xFFF9F7F2),
+                      border: Border.all(color: NeonColors.primary.withOpacity(0.1), width: 1),
                     ),
                     alignment: Alignment.center,
-                    child: Text(result.emoji, style: const TextStyle(fontSize: 32)),
+                    child: Text(result.emoji, style: const TextStyle(fontSize: 28)),
                   ),
-                  const SizedBox(width: 20),
-                  // 우측 이름 및 결과 텍스트
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -402,28 +370,28 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                       children: [
                         Text(
                           result.name,
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white70 : Colors.black54,
-                            fontSize: 14,
+                          style: const TextStyle(
+                            color: NeonColors.textSub,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          result.text,
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
+                        const SizedBox(height: 2),
+                          Text(
+                            result.text,
+                            style: const TextStyle(
+                              color: NeonColors.primary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
                   if (rankNum == 1)
                     const Padding(
                       padding: EdgeInsets.only(right: 20),
-                      child: Text('👑', style: TextStyle(fontSize: 28)),
+                      child: Icon(Icons.stars, color: Colors.amber, size: 28),
                     ),
                 ],
               ),
@@ -434,8 +402,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  // --- 가로 모드 레이아웃 (좌우 분할) ---
-  Widget _buildLandscapeLayout(bool isDarkMode) {
+  Widget _buildLandscapeLayout() {
     final viewModel = context.read<LadderGameViewModel>();
     final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
     final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -449,43 +416,41 @@ class _LadderResultScreenState extends State<LadderResultScreen>
 
     return Row(
       children: [
-        // 좌측: 당첨자/벌칙자/결제자 (스크롤 가능하지만 크게 강조)
         Expanded(
           flex: 5,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
-              children: mainResults.map((result) => _buildPenaltyCard(result, isDarkMode, compact: true, 
+              children: mainResults.map((result) => _buildPenaltyCard(result, compact: true, 
                 isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
             ),
           ),
         ),
-        // 우측: 나머지 리스트 (그리드 형태)
         Expanded(
           flex: 5,
           child: Container(
-            decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: isDarkMode ? Colors.white10 : Colors.black12)),
+            decoration: const BoxDecoration(
+              border: Border(left: BorderSide(color: Color(0xFFE5E0D5))),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                   child: Text(subTitle, 
-                    style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.black54, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
                 ),
                 Expanded(
                   child: GridView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 2.2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 2.5,
                     ),
                     itemCount: subResults.length,
-                    itemBuilder: (context, index) => _buildPassItem(subResults[index], isDarkMode),
+                    itemBuilder: (context, index) => _buildPassItem(subResults[index]),
                   ),
                 ),
               ],
@@ -496,8 +461,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  // --- 세로 모드 레이아웃 ---
-  Widget _buildPortraitLayout(bool isDarkMode) {
+  Widget _buildPortraitLayout() {
     final viewModel = context.read<LadderGameViewModel>();
     final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
     final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -518,16 +482,16 @@ class _LadderResultScreenState extends State<LadderResultScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Column(
         children: [
-          ...mainResults.map((result) => _buildPenaltyCard(result, isDarkMode, isWinMode: isWinMode, isTreatMode: isTreatMode)),
+          ...mainResults.map((result) => _buildPenaltyCard(result, isWinMode: isWinMode, isTreatMode: isTreatMode)),
           const SizedBox(height: 10),
           if (subResults.isNotEmpty)
             Text(subTitle,
-              style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.black54, fontSize: 16, fontWeight: FontWeight.bold)),
+              style: const TextStyle(color: NeonColors.textSub, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Wrap(
             spacing: 12, runSpacing: 12,
             alignment: WrapAlignment.center,
-            children: subResults.map((result) => _buildPassItem(result, isDarkMode, width: (MediaQuery.of(context).size.width - 60) / 3))
+            children: subResults.map((result) => _buildPassItem(result, width: (MediaQuery.of(context).size.width - 60) / 3))
                 .toList(),
           ),
         ],
@@ -535,24 +499,20 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildPenaltyCard(ResultItem result, bool isDarkMode, {bool compact = false, bool isWinMode = false, bool isTreatMode = false, bool isOrderMode = false}) {
+  Widget _buildPenaltyCard(ResultItem result, {bool compact = false, bool isWinMode = false, bool isTreatMode = false, bool isOrderMode = false}) {
     final i = _sortedResults.indexOf(result);
     
-    Color statusColor = Colors.red;
-    String titleIcon = '🚨';
+    Color statusColor = const Color(0xFFBE2D06);
     String titleText = '벌칙 당첨';
 
     if (isWinMode) {
       statusColor = Colors.amber;
-      titleIcon = '🎉';
       titleText = '당첨 결과';
     } else if (isTreatMode) {
       statusColor = Colors.orange;
-      titleIcon = '💸';
       titleText = '오늘의 결제자!';
     } else if (isOrderMode) {
-      statusColor = isDarkMode ? NeonColors.cyan : NeonColors.solidCyan;
-      titleIcon = '👑';
+      statusColor = NeonColors.primary;
       titleText = '영광의 1순위';
     }
     
@@ -564,45 +524,46 @@ class _LadderResultScreenState extends State<LadderResultScreen>
           width: double.infinity,
           padding: EdgeInsets.all(compact ? 20 : 30),
           decoration: BoxDecoration(
-            color: isDarkMode ? statusColor.withOpacity(0.15) : statusColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: statusColor, width: 3),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: NeonColors.primary, width: 2),
             boxShadow: [
-              BoxShadow(color: statusColor.withOpacity(0.4), blurRadius: 20, spreadRadius: 2),
+              BoxShadow(color: NeonColors.primary.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8)),
             ],
           ),
           child: Column(
             children: [
-              Text('$titleIcon $titleText $titleIcon',
-                style: TextStyle(color: statusColor, fontSize: compact ? 14 : 18, fontWeight: FontWeight.w900, 
-                letterSpacing: 2.0, shadows: isDarkMode ? NeonColors.getGlow(statusColor) : null)),
-              SizedBox(height: compact ? 10 : 20),
+              Text(titleText,
+                style: TextStyle(color: statusColor, fontSize: compact ? 15 : 18, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+              SizedBox(height: compact ? 12 : 24),
               Container(
-                width: compact ? 80 : 120, height: compact ? 80 : 120,
+                width: compact ? 70 : 110, height: compact ? 70 : 110,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle, color: isDarkMode ? Colors.black26 : Colors.white,
-                  border: Border.all(color: statusColor, width: 3),
+                  shape: BoxShape.circle, 
+                  color: const Color(0xFFF9F7F2),
+                  border: Border.all(color: NeonColors.primary.withOpacity(0.1), width: 1.5),
                 ),
                 alignment: Alignment.center,
-                child: Text(result.emoji, style: TextStyle(fontSize: compact ? 45 : 70)),
+                child: Text(result.emoji, style: TextStyle(fontSize: compact ? 40 : 60)),
               ),
-              SizedBox(height: compact ? 10 : 20),
-              Text(result.name, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, 
-                fontSize: compact ? 20 : 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
+              SizedBox(height: compact ? 12 : 24),
+              Text(result.name, style: const TextStyle(color: NeonColors.textMain, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(color: statusColor.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1), 
+                  borderRadius: BorderRadius.circular(16)
+                ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     result.text, 
                     textAlign: TextAlign.center,
-                    maxLines: 1,
                     style: TextStyle(
-                      color: isDarkMode ? Colors.white : (isWinMode || isTreatMode || isOrderMode ? (isDarkMode ? Colors.white : Colors.blueGrey[800]) : statusColor), 
-                      fontSize: compact ? 22 : 28, 
-                      fontWeight: FontWeight.w900,
+                      color: statusColor, 
+                      fontSize: compact ? 22 : 26, 
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -614,39 +575,33 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildPassItem(ResultItem result, bool isDarkMode, {double? width, bool isFullWidth = false}) {
+  Widget _buildPassItem(ResultItem result, {double? width, bool isFullWidth = false}) {
     final i = _sortedResults.indexOf(result);
     final viewModel = context.read<LadderGameViewModel>();
     final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
-    final statusColor = isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen;
-    final cyanColor = isDarkMode ? NeonColors.cyan : NeonColors.solidCyan;
 
     return ScaleTransition(
       scale: _animations[i],
       child: Container(
         width: width ?? (isFullWidth ? double.infinity : null),
-        margin: isFullWidth ? const EdgeInsets.only(bottom: 10) : EdgeInsets.zero,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isOrderMode ? cyanColor.withOpacity(0.5) : result.color.withOpacity(0.3), width: 1.5),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: NeonColors.primary.withOpacity(0.1), width: 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: isFullWidth ? MainAxisAlignment.start : MainAxisAlignment.center,
           children: [
-            if (isFullWidth) const SizedBox(width: 10),
-            Text(result.emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 12),
+            Text(result.emoji, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 10),
             Flexible(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(result.name, style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, 
-                    fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                  Text(result.text, style: TextStyle(color: isOrderMode ? cyanColor : statusColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text(result.name, style: const TextStyle(color: NeonColors.textSub, fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                  Text(result.text, style: TextStyle(color: isOrderMode ? NeonColors.primary : NeonColors.primary, fontSize: 13, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'neon_theme.dart';
 
 class NeonButton extends StatefulWidget {
@@ -12,7 +11,7 @@ class NeonButton extends StatefulWidget {
   const NeonButton({
     super.key,
     required this.text,
-    this.color = NeonColors.cyan, // 기본값은 사이언
+    this.color = NeonColors.primary,
     this.onPressed,
     this.width = 200,
     this.height = 60,
@@ -30,12 +29,11 @@ class _NeonButtonState extends State<NeonButton>
   @override
   void initState() {
     super.initState();
-    // 터치 시 버튼이 잠깐 커졌다 작아지는 애니메이션 (타격감 강조)
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 100),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -48,60 +46,47 @@ class _NeonButtonState extends State<NeonButton>
 
   void _handleTap() async {
     if (widget.onPressed == null) return;
-    // 1. 애니메이션 실행 (스케일업)
     await _controller.forward();
-    // 2. 다시 돌아오기 (스케일다운)
     await _controller.reverse();
-    // 3. 실제 동작 실행
     widget.onPressed!();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.watch<ThemeProvider>().isDarkMode;
     final bool isEnabled = widget.onPressed != null;
 
     return GestureDetector(
-      onTap: isEnabled ? _handleTap : null,
+      onTapDown: isEnabled ? (_) => _controller.forward() : null,
+      onTapUp: isEnabled ? (_) => _handleTap() : null,
+      onTapCancel: isEnabled ? () => _controller.reverse() : null,
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: Container(
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: isDarkMode 
-                ? (isEnabled ? NeonColors.backgroundBlack : Colors.white10)
-                : (isEnabled ? const Color(0xFF1A237E) : Colors.grey[300]),
-            borderRadius: BorderRadius.circular(12),
+            color: isEnabled ? widget.color : Colors.grey[300],
+            borderRadius: BorderRadius.circular(32),
             border: Border.all(
-              color: isDarkMode 
-                  ? (isEnabled ? widget.color : Colors.white24)
-                  : (isEnabled ? Colors.white.withOpacity(0.3) : Colors.grey[400]!),
-              width: 3, 
+              color: NeonColors.primary,
+              width: 2, 
             ),
-            boxShadow: isDarkMode && isEnabled ? [
+            boxShadow: isEnabled ? [
               BoxShadow(
-                color: widget.color.withOpacity(0.5),
+                color: NeonColors.primary.withOpacity(0.1),
                 blurRadius: 15,
-                spreadRadius: 2,
+                offset: const Offset(0, 8),
               ),
-            ] : (isEnabled ? [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ] : null),
+            ] : null,
           ),
           alignment: Alignment.center,
           child: Text(
             widget.text,
             style: TextStyle(
-              color: isEnabled ? Colors.white : Colors.white38,
-              fontSize: 22,
+              color: isEnabled ? Colors.white : Colors.grey[600],
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              shadows: isDarkMode && isEnabled ? NeonColors.getGlow(widget.color) : null,
-              fontFamily: 'Roboto',
+              letterSpacing: 0.5,
             ),
           ),
         ),

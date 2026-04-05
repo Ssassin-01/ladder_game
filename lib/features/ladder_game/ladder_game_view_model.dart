@@ -22,7 +22,7 @@ class Participant {
   Map<String, dynamic> toJson() => {
     'animalType': animalType,
     'emoji': emoji,
-    'color': color.value,
+    'color': color.toARGB32(),
     'customName': customName,
   };
 
@@ -331,7 +331,6 @@ class LadderGameViewModel extends ChangeNotifier {
   }
 
   void _generateResults() {
-    final random = Random();
     // 모드별 결과 텍스트 생성
     switch (_currentMode) {
       case LadderGameMode.penalty:

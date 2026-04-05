@@ -149,7 +149,9 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         await Future.delayed(const Duration(milliseconds: 600));
         if (mounted) _navigateToResults(viewModel);
       }
-    } catch (e) {}
+    } catch (e) {
+      // Animation was cancelled or failed, no action needed for now
+    }
   }
 
   void _startAll(LadderGameViewModel viewModel) async {
@@ -239,8 +241,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<LadderGameViewModel>();
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDarkMode = themeProvider.isDarkMode;
     _updateControllers(viewModel);
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -251,19 +251,18 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         toolbarHeight: isLandscape ? 40 : 56,
         title: Text('사다리 게임',
           style: TextStyle(
-            color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
+            color: NeonColors.primary,
             fontSize: isLandscape ? 18 : 20,
-            shadows: isDarkMode ? NeonColors.getGlow(NeonColors.cyan) : null,
           )),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan, size: isLandscape ? 20 : 24),
+          icon: Icon(Icons.arrow_back_ios, color: NeonColors.primary, size: isLandscape ? 20 : 24),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
             onPressed: () => viewModel.toggleShroudActive(),
             icon: Icon(viewModel.isShroudActive ? Icons.visibility_off : Icons.visibility,
-              color: viewModel.isShroudActive ? NeonColors.hotPink : NeonColors.limeGreen)),
+              color: viewModel.isShroudActive ? const Color(0xFFBE2D06) : NeonColors.primary)),
           IconButton(
             onPressed: () {
               _resetGameState();
@@ -272,184 +271,185 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                 _controllers[i].text = viewModel.bottomResults[i];
               }
             },
-            icon: Icon(Icons.refresh, color: isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen)),
+            icon: const Icon(Icons.refresh, color: NeonColors.primary)),
         ],
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double totalW = constraints.maxWidth;
-            final double gap = totalW / (viewModel.playerCount + 1);
-            final double avatarSize = isLandscape ? (gap * 0.7).clamp(15.0, 45.0) : (gap * 0.9).clamp(20.0, 70.0);
-            final double emojiSize = avatarSize * 0.6;
-            final double resultSize = avatarSize;
-            final double fontSize = (resultSize * 0.35).clamp(6.0, 14.0);
-            final double topPadding = isLandscape ? 15.0 : 30.0;
-            final double bottomGap = 5.0;
-            final double ladderHeight = constraints.maxHeight - avatarSize - resultSize - topPadding - bottomGap - 10;
-
-            return Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: topPadding + avatarSize,
-                        left: 0, right: 0,
-                        height: ladderHeight + (resultSize / 2),
-                        child: CustomPaint(
-                          painter: LadderPainter(
-                            playerCount: viewModel.playerCount,
-                            sectionCount: viewModel.sectionCount,
-                            ladderBars: viewModel.ladderBars,
-                            activePathIndices: _activeControllers.keys.toSet(),
-                            animationMap: _activeAnimations,
-                            viewModel: viewModel,
-                            participantColors: viewModel.currentParticipants.map((p) => p.color).toList(),
-                            isDarkMode: isDarkMode,
-                            ladderHeight: ladderHeight,
-                          ),
-                        ),
-                      ),
-                      ...List.generate(viewModel.playerCount, (i) {
-                        final p = viewModel.currentParticipants[i];
-                        return Positioned(
-                          top: topPadding,
-                          left: gap * (i + 1) - (avatarSize / 2),
-                          child: GestureDetector(
-                            onTap: () => _runAnimation(i, viewModel),
-                            child: Container(
-                              width: avatarSize, height: avatarSize,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                                border: Border.all(color: _selectedStartIndices.contains(i) ? p.color : p.color.withOpacity(0.4), width: 2),
-                                boxShadow: isDarkMode && _selectedStartIndices.contains(i) ? [BoxShadow(color: p.color.withOpacity(0.5), blurRadius: 8)] : null,
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(p.emoji, style: TextStyle(fontSize: emojiSize)),
-                            ),
-                          ),
-                        );
-                      }),
-                      Positioned(
-                        top: topPadding + avatarSize + ladderHeight - 2,
-                        left: 0, right: 0,
-                        child: SizedBox(
-                          height: resultSize,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: List.generate(viewModel.playerCount, (i) {
-                              final isTarget = _finishedEndIndices.contains(i);
-                              final resultText = viewModel.bottomResults[i];
-                              
-                              // 벌칙/당첨/쏘기/순서/일반 상태 판별
-                              final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
-                              final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
-                              final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
-                              final bool isPass = (resultText.contains('통과') || resultText.contains('꽝') || resultText.contains('얻어먹기')) && !isOrderMode;
-                              
-                              Color statusColor;
-                              if (isPass) {
-                                statusColor = isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen;
-                              } else {
-                                if (isWinMode) {
-                                  statusColor = Colors.amber;
-                                } else if (isTreatMode) {
-                                  statusColor = Colors.orange;
-                                } else if (isOrderMode) {
-                                  statusColor = isDarkMode ? NeonColors.cyan : NeonColors.solidCyan;
-                                } else {
-                                  statusColor = Colors.red;
-                                }
-                              }
-
-                              return Positioned(
-                                left: gap * (i + 1) - (gap * 0.9 / 2),
-                                child: GestureDetector(
-                                  onTap: isOrderMode ? null : () => _showEditResultDialog(context, i, viewModel),
-                                  child: Container(
-                                    width: gap * 0.9, height: resultSize * 0.75,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(resultSize * 0.35),
-                                      color: isDarkMode ? Colors.black87 : Colors.white,
-                                      border: Border.all(
-                                        color: isTarget ? statusColor : statusColor.withOpacity(0.3), 
-                                        width: (!isPass || isOrderMode) ? 3.0 : 2.5
-                                      ),
-                                      boxShadow: (!isPass || isOrderMode) && isTarget 
-                                          ? [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)] 
-                                          : null,
-                                    ),
-                                    child: Center(
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                          child: Text(resultText, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(color: isTarget ? statusColor : (isDarkMode ? Colors.white : Colors.black87),
-                                              fontSize: fontSize, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: topPadding + avatarSize + 20,
-                        left: 0, right: 0,
-                        height: ladderHeight - 40,
-                        child: IgnorePointer(
-                          ignoring: _isAnimating,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 400),
-                                  opacity: (viewModel.isShroudActive && !_isAnimating) ? 1.0 : 0.0,
-                                  child: ClipRect(
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: isDarkMode ? Colors.black.withOpacity(0.95) : Colors.white.withOpacity(0.95),
-                                          border: Border.all(color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan, width: 3),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (!_isAnimating)
-                                Center(child: _configPanel(context, viewModel, isDarkMode)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        child: AnimatedBuilder(
+          animation: _shakeAnimation!,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: _shakeAnimation!.value * MediaQuery.of(context).size.width,
+              child: child,
             );
           },
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double totalW = constraints.maxWidth;
+              final double gap = totalW / (viewModel.playerCount + 1);
+              final double avatarSize = isLandscape ? (gap * 0.7).clamp(15.0, 45.0) : (gap * 0.9).clamp(20.0, 70.0);
+              final double emojiSize = avatarSize * 0.6;
+              final double resultSize = avatarSize;
+              final double fontSize = (resultSize * 0.35).clamp(6.0, 14.0);
+              final double topPadding = isLandscape ? 15.0 : 30.0;
+              final double bottomGap = 5.0;
+              final double ladderHeight = constraints.maxHeight - avatarSize - resultSize - topPadding - bottomGap - 10;
+  
+              return Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: topPadding + avatarSize,
+                          left: 0, right: 0,
+                          height: ladderHeight + (resultSize / 2),
+                          child: CustomPaint(
+                            painter: LadderPainter(
+                              playerCount: viewModel.playerCount,
+                              sectionCount: viewModel.sectionCount,
+                              ladderBars: viewModel.ladderBars,
+                              activePathIndices: _activeControllers.keys.toSet(),
+                              participantColors: viewModel.currentParticipants.map((p) => p.color).toList(),
+                              animationMap: _activeAnimations,
+                              viewModel: viewModel,
+                              ladderHeight: ladderHeight,
+                            ),
+                          ),
+                        ),
+                        ...List.generate(viewModel.playerCount, (i) {
+                          final p = viewModel.currentParticipants[i];
+                          return Positioned(
+                            top: topPadding,
+                            left: gap * (i + 1) - (avatarSize / 2),
+                            child: GestureDetector(
+                              onTap: () => _runAnimation(i, viewModel),
+                              child: Container(
+                                width: avatarSize, height: avatarSize,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFFF9F7F2),
+                                  border: Border.all(color: _selectedStartIndices.contains(i) ? p.color : p.color.withOpacity(0.4), width: 2),
+                                  boxShadow: _selectedStartIndices.contains(i) ? [BoxShadow(color: p.color.withOpacity(0.5), blurRadius: 8)] : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(p.emoji, style: TextStyle(fontSize: emojiSize)),
+                              ),
+                            ),
+                          );
+                        }),
+                        Positioned(
+                          top: topPadding + avatarSize + ladderHeight - 2,
+                          left: 0, right: 0,
+                          child: SizedBox(
+                            height: resultSize,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: List.generate(viewModel.playerCount, (i) {
+                                final isTarget = _finishedEndIndices.contains(i);
+                                final resultText = viewModel.bottomResults[i];
+                                
+                                final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
+                                final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
+                                final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
+                                final bool isPass = (resultText.contains('통과') || resultText.contains('꽝') || resultText.contains('얻어먹기')) && !isOrderMode;
+                                
+                                Color statusColor;
+                                if (isPass) {
+                                  statusColor = NeonColors.primary;
+                                } else {
+                                  if (isWinMode) {
+                                    statusColor = Colors.amber;
+                                  } else if (isTreatMode) {
+                                    statusColor = Colors.orange;
+                                  } else if (isOrderMode) {
+                                    statusColor = NeonColors.primary;
+                                  } else {
+                                    statusColor = const Color(0xFFBE2D06);
+                                  }
+                                }
+  
+                                return Positioned(
+                                  left: gap * (i + 1) - (gap * 0.9 / 2),
+                                  child: GestureDetector(
+                                    onTap: isOrderMode ? null : () => _showEditResultDialog(context, i, viewModel),
+                                    child: Container(
+                                      width: gap * 0.9, height: resultSize * 0.75,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(resultSize * 0.35),
+                                        color: Colors.white,
+                                        border: Border.all(
+                                          color: isTarget ? statusColor : statusColor.withOpacity(0.3), 
+                                          width: (!isPass || isOrderMode) ? 3.0 : 2.5
+                                        ),
+                                        boxShadow: (!isPass || isOrderMode) && isTarget 
+                                            ? [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)] 
+                                            : null,
+                                      ),
+                                      child: Center(
+                                        child: FittedBox(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                            child: Text(resultText, textAlign: TextAlign.center,
+                                              style: TextStyle(color: isTarget ? statusColor : NeonColors.textMain,
+                                                fontSize: fontSize, fontWeight: FontWeight.bold)),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: topPadding + avatarSize + 20,
+                          left: 0, right: 0,
+                          height: ladderHeight - 40,
+                          child: IgnorePointer(
+                            ignoring: _isAnimating,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: AnimatedOpacity(
+                                    duration: const Duration(milliseconds: 400),
+                                    opacity: (viewModel.isShroudActive && !_isAnimating) ? 1.0 : 0.0,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.95),
+                                        border: Border.all(color: NeonColors.primary, width: 3),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (!_isAnimating)
+                                  Center(child: _configPanel(context, viewModel)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _configPanel(BuildContext context, LadderGameViewModel viewModel, bool isDarkMode) {
+  Widget _configPanel(BuildContext context, LadderGameViewModel viewModel) {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('가로선 (터치하여 직접 수정)', 
-            style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: isLandscape ? 12 : 14)),
+            style: TextStyle(color: NeonColors.textSub, fontSize: isLandscape ? 12 : 14)),
           SizedBox(height: isLandscape ? 8 : 15),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -457,7 +457,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
               _smallCircleButton('-', () {
                 SoundManager().playTick();
                 if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
-              }, isDarkMode, onLongPress: () => _startAutoIncrement(false, viewModel), onLongPressEnd: _stopAutoIncrement),
+              }, onLongPress: () => _startAutoIncrement(false, viewModel), onLongPressEnd: _stopAutoIncrement),
               
               SizedBox(width: isLandscape ? 15 : 25),
               
@@ -467,8 +467,8 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: isLandscape ? 10 : 15, vertical: 5),
-                  child: Text('${viewModel.sectionCount}줄',
-                    style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: isLandscape ? 22 : 28)),
+                      child: Text('${viewModel.sectionCount}줄',
+                    style: TextStyle(color: NeonColors.textMain, fontWeight: FontWeight.bold, fontSize: isLandscape ? 22 : 28)),
                 ),
               ),
               
@@ -477,7 +477,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
               _smallCircleButton('+', () {
                 SoundManager().playTick();
                 if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
-              }, isDarkMode, onLongPress: () => _startAutoIncrement(true, viewModel), onLongPressEnd: _stopAutoIncrement),
+              }, onLongPress: () => _startAutoIncrement(true, viewModel), onLongPressEnd: _stopAutoIncrement),
             ],
           ),
           SizedBox(height: isLandscape ? 12 : 25),
@@ -485,7 +485,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
             text: 'START',
             width: isLandscape ? 120 : 140,
             height: isLandscape ? 38 : 45,
-            color: isDarkMode ? NeonColors.hotPink : const Color(0xFF1A237E),
+            color: NeonColors.primary,
             onPressed: () => _startAll(viewModel),
           ),
         ],
@@ -493,8 +493,8 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     );
   }
 
-  Widget _smallCircleButton(String text, VoidCallback onPressed, bool isDarkMode, {VoidCallback? onLongPress, VoidCallback? onLongPressEnd}) {
-    final color = isDarkMode ? NeonColors.cyan : NeonColors.solidCyan;
+  Widget _smallCircleButton(String text, VoidCallback onPressed, {VoidCallback? onLongPress, VoidCallback? onLongPressEnd}) {
+    const color = NeonColors.primary;
     return GestureDetector(
       onLongPressStart: (_) => onLongPress?.call(),
       onLongPressEnd: (_) => onLongPressEnd?.call(),
@@ -505,7 +505,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
           width: 45, height: 45,
           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
           alignment: Alignment.center,
-          child: Text(text, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
+          child: Text(text, style: const TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
         ),
       ),
     );

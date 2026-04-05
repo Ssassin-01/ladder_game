@@ -70,7 +70,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
   void _stopTimer() {
     _timer?.cancel();
     _timer = null;
-    // 롱프레스 종료 후 약간의 지연을 두어 onTap이 바로 실행되지 않도록 함
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) setState(() => _isLongPressing = false);
     });
@@ -136,9 +135,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
     final viewModel = context.watch<LadderGameViewModel>();
-    final isDarkMode = themeProvider.isDarkMode;
     final bool isOrderMode = widget.mode == LadderGameMode.order;
     final bool isManualMode = widget.mode == LadderGameMode.manual;
     final bool isTeamMode = widget.mode == LadderGameMode.team;
@@ -146,14 +143,12 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                                 widget.mode == LadderGameMode.win || 
                                 widget.mode == LadderGameMode.treat) && !isOrderMode;
 
-    // 플레이어 수 컨트롤러 동기화 (명단 불러오기 시 자동 반영)
     if (_playerCountController.text != viewModel.playerCount.toString()) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _playerCountController.text = viewModel.playerCount.toString();
       });
     }
 
-    // 참가자 수에 맞춰 컨트롤러 개수 동기화
     if ((isDynamicMode || isManualMode) &&
         _penaltyControllers.length != (isManualMode ? viewModel.playerCount : _penaltyControllers.length)) {
       if (isManualMode && _penaltyControllers.length != viewModel.playerCount) {
@@ -183,34 +178,27 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9F7F2),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-          ),
+          icon: const Icon(Icons.arrow_back_ios, color: NeonColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '${widget.mode.label} 사다리 설정',
-          style: TextStyle(
-            color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-            shadows: isDarkMode ? NeonColors.getGlow(NeonColors.cyan) : null,
+          '${widget.mode.label} 설정',
+          style: const TextStyle(
+            color: NeonColors.primary,
+            fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(
-              Icons.refresh,
-              color: isDarkMode ? NeonColors.hotPink : NeonColors.solidPink,
-            ),
+            icon: const Icon(Icons.refresh, color: NeonColors.secondary),
             onPressed: () {
               SoundManager().playTick();
               viewModel.resetSettings();
-              
-              // 텍스트 컨트롤러들도 초기화
               setState(() {
                 for (var controller in _penaltyControllers) {
                   controller.dispose();
@@ -227,60 +215,43 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildParticipantSection(viewModel, isDarkMode),
-                    const SizedBox(height: 40),
-  
-                    if (isDynamicMode || isManualMode)
-                      _buildPenaltySection(viewModel, isDarkMode),
-                    
-                    if (isTeamMode)
-                      _buildTeamSection(viewModel, isDarkMode),
-                    
-                    const SizedBox(height: 10),
-                    _sectionTitle(
-                      '사다리 속도 (${viewModel.speedLevel}단계)',
-                      isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen,
-                      isDarkMode,
-                    ),
-                    Slider(
-                      value: viewModel.speedLevel.toDouble(),
-                      min: 1,
-                      max: 5,
-                      divisions: 4,
-                      activeColor:
-                          isDarkMode
-                              ? NeonColors.limeGreen
-                              : NeonColors.solidGreen,
-                      onChanged: (val) => viewModel.setSpeedLevel(val.toInt()),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                children: [
+                  _buildParticipantSection(viewModel),
+                  const SizedBox(height: 32),
+                  if (isDynamicMode || isManualMode)
+                    _buildPenaltySection(viewModel),
+                  if (isTeamMode)
+                    _buildTeamSection(viewModel),
+                  const SizedBox(height: 10),
+                  _sectionTitle('동작 속도 (${viewModel.speedLevel}단계)', NeonColors.primary),
+                  Slider(
+                    value: viewModel.speedLevel.toDouble(),
+                    min: 1, max: 5, divisions: 4,
+                    activeColor: NeonColors.primary,
+                    inactiveColor: NeonColors.primary.withOpacity(0.1),
+                    onChanged: (val) => viewModel.setSpeedLevel(val.toInt()),
+                  ),
+                ],
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: NeonButton(
-              text: '게임 시작!',
-              color: isStartButtonEnabled 
-                  ? (isDarkMode ? NeonColors.limeGreen : NeonColors.solidGreen)
-                  : Colors.grey,
+              text: '게임 시작',
+              color: isStartButtonEnabled ? NeonColors.primary : Colors.grey[400]!,
               width: double.infinity,
-              height: 56,
+              height: 60,
               onPressed: isStartButtonEnabled ? () {
                 if (isDynamicMode || isManualMode) {
                   String defaultText = '벌칙';
                   if (widget.mode == LadderGameMode.win) {
                     defaultText = '당첨';
                   } else if (widget.mode == LadderGameMode.treat) {
-                    defaultText = '내가 쏜다!';
+                    defaultText = '내가 쏜다';
                   } else if (widget.mode == LadderGameMode.manual) {
                     defaultText = '내용 없음';
                   }
@@ -291,9 +262,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                         return text.isEmpty ? defaultText : text;
                       }).toList();
                   viewModel.setAllPenalties(finalPenalties);
-                } else if (isOrderMode) {
-                  // 순서 모드는 이미 viewModel.setMode 내에서 
-                  // _generateResults를 통해 순번을 생성함
                 }
                 SoundManager().playFanfare();
                 Navigator.push(
@@ -310,20 +278,19 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  // 팀 나누기 전용 설정 위젯
-  Widget _buildTeamSection(LadderGameViewModel viewModel, bool isDarkMode) {
-    final Color teamAccent = NeonColors.cyan;
+  Widget _buildTeamSection(LadderGameViewModel viewModel) {
+    const Color teamAccent = NeonColors.secondary;
     final int maxTeams = (viewModel.playerCount / 2).floor().clamp(2, 6);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle('팀 수 설정', isDarkMode ? teamAccent : NeonColors.solidCyan, isDarkMode),
-        const SizedBox(height: 12),
-        // 팀 수 선택 칩
+        _sectionTitle('팀 수 설정', teamAccent),
+        const SizedBox(height: 16),
         Wrap(
-          spacing: 10,
+          spacing: 12,
+          runSpacing: 12,
           children: List.generate(maxTeams - 1, (i) {
-            final teamNum = i + 2; // 2팀 ~ maxTeams哀
+            final teamNum = i + 2;
             final isSelected = viewModel.teamCount == teamNum;
             final teamColor = LadderGameViewModel.teamColors[i];
             return GestureDetector(
@@ -333,35 +300,31 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isSelected ? teamColor.withAlpha(80) : Colors.white10,
+                  color: isSelected ? teamColor.withOpacity(0.1) : Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? teamColor : Colors.white24,
-                    width: isSelected ? 2 : 1,
+                    color: isSelected ? teamColor : NeonColors.textSub.withOpacity(0.1),
+                    width: isSelected ? 2 : 1.5,
                   ),
-                  boxShadow: isSelected ? [
-                    BoxShadow(color: teamColor.withAlpha(120), blurRadius: 8, spreadRadius: 1)
-                  ] : [],
                 ),
                 child: Text(
                   '$teamNum팀',
                   style: TextStyle(
-                    color: isSelected ? teamColor : Colors.white54,
+                    color: isSelected ? teamColor : NeonColors.textSub,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ),
             );
           }),
         ),
-        const SizedBox(height: 20),
-        // 팀장 유무 토글
+        const SizedBox(height: 24),
         Row(
           children: [
-            _sectionTitle('팀장 선정', isDarkMode ? NeonColors.electricYellow : NeonColors.solidYellow, isDarkMode),
+            _sectionTitle('팀장 선정', NeonColors.primary),
             const Spacer(),
             Switch(
               value: viewModel.hasTeamLeader,
@@ -369,7 +332,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 SoundManager().playTick();
                 viewModel.setHasTeamLeader(val);
               },
-              activeThumbColor: NeonColors.electricYellow,
+              activeColor: NeonColors.primary,
             ),
           ],
         ),
@@ -377,18 +340,11 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  Widget _buildParticipantSection(
-    LadderGameViewModel viewModel,
-    bool isDarkMode,
-  ) {
+  Widget _buildParticipantSection(LadderGameViewModel viewModel) {
     return Column(
       children: [
-        _sectionTitle(
-          '참가자 수',
-          isDarkMode ? NeonColors.electricYellow : NeonColors.solidYellow,
-          isDarkMode,
-        ),
-        const SizedBox(height: 12),
+        _sectionTitle('참가자 수', NeonColors.primary),
+        const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -400,12 +356,10 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   _playerCountController.text = viewModel.playerCount.toString();
                 }
               },
-              isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-              isDarkMode,
-              size: 32,
+              NeonColors.primary,
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -417,10 +371,10 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                       controller: _playerCountController,
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: isDarkMode ? Colors.white : Colors.black87,
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: NeonColors.textMain,
                       ),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
@@ -433,20 +387,14 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                           viewModel.setPlayerCount(count.clamp(2, 20));
                         }
                       },
-                      onSubmitted: (val) {
-                        int count = (int.tryParse(val) ?? viewModel.playerCount)
-                            .clamp(2, 20);
-                        viewModel.setPlayerCount(count);
-                        _playerCountController.text = count.toString();
-                      },
                     ),
                   ),
-                  Text(
+                  const Text(
                     '명',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white54 : Colors.black54,
+                      color: NeonColors.textSub,
                     ),
                   ),
                 ],
@@ -460,22 +408,14 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   _playerCountController.text = viewModel.playerCount.toString();
                 }
               },
-              isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-              isDarkMode,
-              size: 32,
+              NeonColors.primary,
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          "2명 ~ 20명 입력 가능",
-          style: TextStyle(
-            color: isDarkMode ? Colors.white38 : Colors.black38,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 15),
-        ElevatedButton.icon(
+        const SizedBox(height: 8),
+        const Text("2명 ~ 20명까지 설정 가능", style: TextStyle(color: NeonColors.textSub, fontSize: 13)),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(
           onPressed: () {
             SoundManager().playTick();
             showDialog(
@@ -483,125 +423,79 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               builder: (ctx) => const ParticipantManagerDialog()
             );
           },
-          icon: Icon(Icons.people_alt, color: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan),
-          label: Text('명단 관리 (저장/불러오기)'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isDarkMode ? Colors.white10 : Colors.black12,
-            foregroundColor: isDarkMode ? NeonColors.cyan : NeonColors.solidCyan,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            elevation: 0,
+          icon: const Icon(Icons.people_alt, size: 20),
+          label: const Text('명단 관리', style: TextStyle(fontWeight: FontWeight.bold)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: NeonColors.primary,
+            side: BorderSide(color: NeonColors.primary.withOpacity(0.2)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPenaltySection(LadderGameViewModel viewModel, bool isDarkMode) {
+  Widget _buildPenaltySection(LadderGameViewModel viewModel) {
     final bool isWinMode = widget.mode == LadderGameMode.win;
     final bool isTreatMode = widget.mode == LadderGameMode.treat;
     final bool isManualMode = widget.mode == LadderGameMode.manual;
     
-    Color accentColor;
-    if (isWinMode) {
-      accentColor = isDarkMode ? NeonColors.electricYellow : NeonColors.solidYellow;
-    } else if (isTreatMode) {
-      accentColor = Colors.orangeAccent;
-    } else if (isManualMode) {
-      accentColor = isDarkMode ? NeonColors.cyan : NeonColors.solidCyan;
-    } else {
-      accentColor = isDarkMode ? NeonColors.hotPink : NeonColors.solidPink;
-    }
-    
-    String sectionTitleStr = '벌칙 설정';
-    String hintTextStr = '벌칙을 입력해주세요';
-
-    if (isWinMode) {
-      sectionTitleStr = '당첨자 설정';
-      hintTextStr = '당첨 내용(상품)을 입력하세요';
-    } else if (isTreatMode) {
-      sectionTitleStr = '쏘기(결제) 설정';
-      hintTextStr = '무엇을 쏠지 입력하세요 (예: 커피, 밥)';
-    } else if (isManualMode) {
-      sectionTitleStr = '결과 직접 입력';
-      hintTextStr = '내용을 입력해주세요';
-    }
+    Color accentColor = isWinMode ? Colors.amber[700]! : (isTreatMode ? Colors.orange : NeonColors.primary);
+    String sectionTitleStr = isWinMode ? '당첨자 설정' : (isTreatMode ? '결제자 설정' : '벌칙 설정');
+    String hintTextStr = isWinMode ? '당첨 내용을 입력하세요' : (isTreatMode ? '무엇을 쏠까요?' : '벌칙을 입력해주세요');
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _sectionTitle(sectionTitleStr, accentColor, isDarkMode),
-            if (!isManualMode)
-              _longPressCircleButton(
-                Icons.add_circle,
-                () => _addPenaltyField(viewModel.playerCount - 1),
-                accentColor,
-                isDarkMode,
-              ),
-            if (isManualMode)
-              _longPressCircleButton(
-                Icons.add_circle,
-                () => _addPenaltyField(20, isManualMode: true, viewModel: viewModel),
-                accentColor,
-                isDarkMode,
-              ),
+            _sectionTitle(sectionTitleStr, accentColor),
+            _longPressCircleButton(
+              Icons.add_circle,
+              () => _addPenaltyField(isManualMode ? 20 : viewModel.playerCount - 1, isManualMode: isManualMode, viewModel: isManualMode ? viewModel : null),
+              accentColor,
+            ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _penaltyControllers.length,
           itemBuilder: (context, index) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _penaltyControllers[index],
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                        fontSize: 15,
-                      ),
+                      style: const TextStyle(color: NeonColors.textMain, fontSize: 15),
                       decoration: InputDecoration(
                         prefixText: "${index + 1}. ",
-                        prefixStyle: TextStyle(
-                          color: accentColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        prefixStyle: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
                         hintText: hintTextStr,
-                        hintStyle: TextStyle(
-                          color: isDarkMode ? Colors.white24 : Colors.black26,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                        hintStyle: TextStyle(color: NeonColors.textSub.withValues(alpha: 0.4)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         filled: true,
-                        fillColor:
-                            isDarkMode
-                                ? Colors.white.withOpacity(0.05)
-                                : Colors.black.withOpacity(0.05),
+                        fillColor: Colors.white,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: NeonColors.textSub.withValues(alpha: 0.1)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: NeonColors.textSub.withValues(alpha: 0.1)),
                         ),
                       ),
                     ),
                   ),
                   if ((!isManualMode && _penaltyControllers.length > 1) || (isManualMode && _penaltyControllers.length > 2))
                     _longPressCircleButton(
-                      Icons.remove_circle_outline,
-                      () => _removePenaltyField(
-                        index, 
-                        isManualMode: isManualMode, 
-                        viewModel: isManualMode ? viewModel : null
-                      ),
-                      Colors.redAccent,
-                      isDarkMode,
-                      size: 22,
+                      Icons.remove_circle,
+                      () => _removePenaltyField(index, isManualMode: isManualMode, viewModel: isManualMode ? viewModel : null),
+                      Colors.grey[400]!,
                     ),
                 ],
               ),
@@ -612,25 +506,18 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  Widget _sectionTitle(String title, Color color, bool isDarkMode) {
+  Widget _sectionTitle(String title, Color color) {
     return Text(
       title,
       style: TextStyle(
         color: color,
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: FontWeight.bold,
-        shadows: isDarkMode ? NeonColors.getGlow(color) : null,
       ),
     );
   }
 
-  Widget _longPressCircleButton(
-    IconData icon,
-    VoidCallback action,
-    Color color,
-    bool isDarkMode, {
-    double size = 28,
-  }) {
+  Widget _longPressCircleButton(IconData icon, VoidCallback action, Color color, {double size = 30}) {
     return GestureDetector(
       onTap: () {
         if (!_isLongPressing && _shouldProcessTap()) {

@@ -13,11 +13,8 @@ class ParticipantManagerDialog extends StatefulWidget {
 }
 
 class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
-  // 각 참가자의 이름 컨트롤러 리스트
   final List<TextEditingController> _nameControllers = [];
-  // 각 컨트롤러의 포커스 노드 (키보드가 해당 항목을 가리지 않도록)
   final List<FocusNode> _focusNodes = [];
-  // 스크롤 컨트롤러 (키보드 올라올 때 해당 항목으로 스크롤)
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -28,13 +25,8 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
   }
 
   void _rebuildControllers(LadderGameViewModel viewModel) {
-    // 기존 컨트롤러/포커스 해제
-    for (final c in _nameControllers) {
-      c.dispose();
-    }
-    for (final f in _focusNodes) {
-      f.dispose();
-    }
+    for (final c in _nameControllers) c.dispose();
+    for (final f in _focusNodes) f.dispose();
     _nameControllers.clear();
     _focusNodes.clear();
 
@@ -42,19 +34,16 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
       final p = viewModel.currentParticipants[i];
       _nameControllers.add(TextEditingController(text: p.customName ?? p.animalType));
       final fn = FocusNode();
-      // 포커스 될 때 해당 항목이 보이게 스크롤
       fn.addListener(() {
-        if (fn.hasFocus) {
+        if (fn.hasFocus && _scrollController.hasClients) {
           Future.delayed(const Duration(milliseconds: 350), () {
-            if (_scrollController.hasClients) {
-              final idx = _focusNodes.indexOf(fn);
-              final targetOffset = idx * 68.0; // 각 행 높이
-              _scrollController.animateTo(
-                targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            }
+            final idx = _focusNodes.indexOf(fn);
+            final targetOffset = idx * 64.0;
+            _scrollController.animateTo(
+              targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
           });
         }
       });
@@ -64,48 +53,41 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
 
   @override
   void dispose() {
-    for (final c in _nameControllers) {
-      c.dispose();
-    }
-    for (final f in _focusNodes) {
-      f.dispose();
-    }
+    for (final c in _nameControllers) c.dispose();
+    for (final f in _focusNodes) f.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  // 이름 변경 저장 후 명단 관리 다이얼로그 닫기
   void _saveAndClose() {
     final viewModel = context.read<LadderGameViewModel>();
     for (int i = 0; i < _nameControllers.length; i++) {
       viewModel.updateParticipantName(i, _nameControllers[i].text);
     }
     SoundManager().playTick();
-    // 변경 반영 후 팝업 닫기
     viewModel.setPlayerCount(viewModel.playerCount);
     Navigator.pop(context);
   }
 
-  // 동물 아이콘 선택 팝업
   void _showAnimalPicker(int index) {
     final viewModel = context.read<LadderGameViewModel>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: NeonColors.darkCharcoal,
+        backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: NeonColors.hotPink, width: 2),
+          borderRadius: BorderRadius.circular(32),
+          side: const BorderSide(color: NeonColors.primary, width: 2),
         ),
-        title: const Text('동물 선택', style: TextStyle(color: NeonColors.hotPink)),
+        title: const Text('동물 선택', style: TextStyle(color: NeonColors.primary, fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: double.maxFinite,
           height: 280,
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 5,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
             ),
             itemCount: viewModel.allAvailableParticipants.length,
             itemBuilder: (_, i) {
@@ -114,7 +96,6 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 onTap: () {
                   SoundManager().playTick();
                   viewModel.changeParticipantAnimal(index, animal);
-                  // 이름도 동물 이름으로 초기화
                   setState(() {
                     _nameControllers[index].text = animal.animalType;
                   });
@@ -122,11 +103,12 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFF9F7F2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: NeonColors.textSub.withOpacity(0.1)),
                   ),
                   child: Center(
-                    child: Text(animal.emoji, style: const TextStyle(fontSize: 28)),
+                    child: Text(animal.emoji, style: const TextStyle(fontSize: 24)),
                   ),
                 ),
               );
@@ -136,17 +118,15 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소', style: TextStyle(color: Colors.white54)),
+            child: const Text('취소', style: TextStyle(color: NeonColors.textSub)),
           ),
         ],
       ),
     );
   }
 
-  // 명단 저장 팝업
   void _showSaveDialog() {
     final viewModel = context.read<LadderGameViewModel>();
-    // 저장 전 이름 먼저 반영
     for (int i = 0; i < _nameControllers.length; i++) {
       viewModel.updateParticipantName(i, _nameControllers[i].text);
     }
@@ -155,17 +135,17 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
       builder: (ctx) {
         String presetName = '';
         return AlertDialog(
-          backgroundColor: NeonColors.darkCharcoal,
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: NeonColors.limeGreen, width: 2),
+            borderRadius: BorderRadius.circular(32),
+            side: const BorderSide(color: NeonColors.primary, width: 2),
           ),
-          title: const Text('명단 저장', style: TextStyle(color: NeonColors.limeGreen)),
+          title: const Text('명단 저장', style: TextStyle(color: NeonColors.primary, fontWeight: FontWeight.bold)),
           content: TextField(
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: NeonColors.textMain),
             decoration: const InputDecoration(
-              hintText: '저장할 이름 입력',
-              hintStyle: TextStyle(color: Colors.white54),
+              hintText: '저장할 이름을 입력하세요',
+              hintStyle: TextStyle(color: NeonColors.textSub),
             ),
             autofocus: true,
             onChanged: (val) => presetName = val,
@@ -173,7 +153,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('취소', style: TextStyle(color: Colors.white54)),
+              child: const Text('취소', style: TextStyle(color: NeonColors.textSub)),
             ),
             TextButton(
               onPressed: () async {
@@ -182,15 +162,15 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                   final navCtx = Navigator.of(ctx);
                   final navThis = Navigator.of(context);
                   await viewModel.saveCurrentParticipants(presetName.trim());
-                  navCtx.pop(); // 저장 다이얼로그 닫기
-                  navThis.pop(); // 명단 관리 다이얼로그도 닫기
+                  navCtx.pop();
+                  navThis.pop();
                   messenger.showSnackBar(SnackBar(
                     content: Text("'$presetName' 명단이 저장되었습니다."),
-                    backgroundColor: NeonColors.limeGreen.withAlpha(200),
+                    backgroundColor: NeonColors.primary,
                   ));
                 }
               },
-              child: const Text('저장', style: TextStyle(color: NeonColors.limeGreen)),
+              child: const Text('저장', style: TextStyle(color: NeonColors.primary, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -198,7 +178,6 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
     );
   }
 
-  // 명단 불러오기 팝업
   void _showLoadDialog() async {
     final viewModel = context.read<LadderGameViewModel>();
     final lists = await viewModel.getSavedLists();
@@ -207,21 +186,21 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: NeonColors.darkCharcoal,
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: Colors.orangeAccent, width: 2),
+            borderRadius: BorderRadius.circular(32),
+            side: const BorderSide(color: NeonColors.primary, width: 2),
           ),
           title: Row(
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(ctx),
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white54, size: 20),
+                icon: const Icon(Icons.arrow_back_ios, color: NeonColors.textSub, size: 18),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 8),
-              const Text('명단 불러오기', style: TextStyle(color: Colors.orangeAccent)),
+              const Text('명단 불러오기', style: TextStyle(color: NeonColors.primary, fontWeight: FontWeight.bold)),
             ],
           ),
           content: SizedBox(
@@ -229,16 +208,17 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
             height: 300,
             child: lists.isEmpty
                 ? const Center(
-                    child: Text('저장된 명단이 없습니다.', style: TextStyle(color: Colors.white54)),
+                    child: Text('저장된 명단이 없습니다.', style: TextStyle(color: NeonColors.textSub)),
                   )
-                : ListView.builder(
+                : ListView.separated(
                     itemCount: lists.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE5E0D5)),
                     itemBuilder: (_, i) {
                       return ListTile(
-                        leading: const Icon(Icons.people, color: Colors.orangeAccent),
-                        title: Text(lists[i], style: const TextStyle(color: Colors.white)),
+                        leading: const Icon(Icons.people_outline, color: NeonColors.primary, size: 20),
+                        title: Text(lists[i], style: const TextStyle(color: NeonColors.textMain, fontSize: 14)),
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.redAccent),
+                          icon: const Icon(Icons.delete_outline, color: Color(0xFFBE2D06), size: 20),
                           onPressed: () async {
                             final nav = Navigator.of(ctx);
                             await viewModel.deleteParticipantList(lists[i]);
@@ -249,10 +229,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                           final nav = Navigator.of(ctx);
                           await viewModel.loadParticipantList(lists[i]);
                           nav.pop();
-                          // 불러온 뒤 컨트롤러 재빌드
-                          if (mounted) {
-                            setState(() => _rebuildControllers(viewModel));
-                          }
+                          if (mounted) setState(() => _rebuildControllers(viewModel));
                         },
                       );
                     },
@@ -267,7 +244,6 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
   Widget build(BuildContext context) {
     final viewModel = context.watch<LadderGameViewModel>();
 
-    // 참가자 수가 변경되었을 때 컨트롤러 재빌드
     if (_nameControllers.length != viewModel.playerCount) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _rebuildControllers(viewModel));
@@ -279,57 +255,53 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         decoration: BoxDecoration(
-          color: NeonColors.darkCharcoal,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: NeonColors.cyan, width: 2),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: NeonColors.primary, width: 2),
           boxShadow: [
             BoxShadow(
-              color: NeonColors.cyan.withAlpha(60),
+              color: NeonColors.primary.withOpacity(0.05),
               blurRadius: 20,
-              spreadRadius: 2,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 헤더
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: _saveAndClose,
-                    icon: const Icon(Icons.arrow_back_ios, size: 20, color: NeonColors.cyan),
+                    icon: const Icon(Icons.close, size: 22, color: NeonColors.textSub),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
+                  const Expanded(
                     child: Text(
-                      '참가자 명단 관리',
+                      '명단 관리',
                       style: TextStyle(
-                        color: NeonColors.cyan,
+                        color: NeonColors.primary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        shadows: NeonColors.getGlow(NeonColors.cyan),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // 인원 증감 버튼
                   _buildCountButton(Icons.remove, () {
                     if (viewModel.playerCount > 2) {
                       viewModel.setPlayerCount(viewModel.playerCount - 1);
                     }
                   }),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Text(
                     '${viewModel.playerCount}명',
                     style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      color: NeonColors.textMain, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   _buildCountButton(Icons.add, () {
                     if (viewModel.playerCount < 20) {
                       viewModel.setPlayerCount(viewModel.playerCount + 1);
@@ -338,81 +310,55 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            const Divider(color: Colors.white12),
-            // 참가자 리스트 (스크롤 + 키보드 회피)
+            const Divider(height: 1, color: Color(0xFFE5E0D5)),
             Flexible(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shrinkWrap: true,
                 itemCount: viewModel.playerCount,
                 itemBuilder: (_, i) {
-                  if (i >= _nameControllers.length || i >= _focusNodes.length) {
-                    return const SizedBox();
-                  }
+                  if (i >= _nameControllers.length) return const SizedBox();
                   final p = viewModel.currentParticipants[i];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
-                        // 동물 아이콘 (터치 시 선택 팝업)
                         GestureDetector(
                           onTap: () {
                             SoundManager().playTick();
                             _showAnimalPicker(i);
                           },
                           child: Container(
-                            width: 48,
-                            height: 48,
+                            width: 48, height: 48,
                             decoration: BoxDecoration(
-                              color: Colors.white10,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: NeonColors.cyan.withAlpha(80)),
+                              color: const Color(0xFFF9F7F2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: NeonColors.textSub.withValues(alpha: 0.1)),
                             ),
                             child: Center(
-                              child: Stack(
-                                alignment: Alignment.bottomRight,
-                                children: [
-                                  Text(p.emoji, style: const TextStyle(fontSize: 26)),
-                                  Container(
-                                    padding: const EdgeInsets.all(1),
-                                    decoration: BoxDecoration(
-                                      color: NeonColors.hotPink,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Icon(Icons.edit, color: Colors.white, size: 9),
-                                  ),
-                                ],
-                              ),
+                              child: Text(p.emoji, style: const TextStyle(fontSize: 24)),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        // 이름 입력 필드
+                        const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             controller: _nameControllers[i],
                             focusNode: _focusNodes[i],
-                            style: const TextStyle(color: Colors.white, fontSize: 15),
+                            style: const TextStyle(color: NeonColors.textMain, fontSize: 15),
                             decoration: InputDecoration(
                               hintText: '이름 입력',
-                              hintStyle: const TextStyle(color: Colors.white38),
+                              hintStyle: const TextStyle(color: NeonColors.textSub),
                               filled: true,
-                              fillColor: Colors.white.withAlpha(15),
+                              fillColor: const Color(0xFFF9F7F2).withValues(alpha: 0.5),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(16),
                                 borderSide: BorderSide.none,
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: NeonColors.cyan, width: 1.5),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
-                            onChanged: (val) {
-                              viewModel.updateParticipantName(i, val);
-                            },
+                            onChanged: (val) => viewModel.updateParticipantName(i, val),
                           ),
                         ),
                       ],
@@ -421,40 +367,38 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 },
               ),
             ),
-            const Divider(color: Colors.white12),
-            // 하단 버튼들
+            const Divider(height: 1, color: Color(0xFFE5E0D5)),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
+              padding: const EdgeInsets.all(20),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: NeonButton(
-                          text: '불러오기',
-                          width: double.infinity,
-                          height: 44,
-                          color: Colors.orangeAccent,
-                          onPressed: () {
-                            SoundManager().playTick();
-                            _showLoadDialog();
-                          },
-                        ),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        SoundManager().playTick();
+                        _showLoadDialog();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: NeonColors.primary,
+                        side: BorderSide(color: NeonColors.primary.withOpacity(0.2)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: NeonButton(
-                          text: '명단 저장',
-                          width: double.infinity,
-                          height: 44,
-                          color: NeonColors.limeGreen,
-                          onPressed: () {
-                            SoundManager().playTick();
-                            _showSaveDialog();
-                          },
-                        ),
-                      ),
-                    ],
+                      child: const Text('불러오기', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: NeonButton(
+                      text: '명단 저장',
+                      width: double.infinity,
+                      height: 48,
+                      color: NeonColors.primary,
+                      onPressed: () {
+                        SoundManager().playTick();
+                        _showSaveDialog();
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -472,14 +416,13 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
         onTap();
       },
       child: Container(
-        width: 30,
-        height: 30,
+        width: 32, height: 32,
         decoration: BoxDecoration(
-          color: Colors.white10,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: NeonColors.cyan.withAlpha(100)),
+          color: const Color(0xFFF9F7F2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: NeonColors.textSub.withOpacity(0.1)),
         ),
-        child: Icon(icon, color: NeonColors.cyan, size: 18),
+        child: Icon(icon, color: NeonColors.primary, size: 18),
       ),
     );
   }
