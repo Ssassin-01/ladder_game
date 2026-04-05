@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
@@ -139,26 +140,30 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     return Screenshot(
       controller: _screenshotController,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF9F7F2),
+        backgroundColor: NeonColors.background,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          centerTitle: true,
+          toolbarHeight: isLandscape ? 48 : 64,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: NeonColors.primary),
+            icon: Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: isLandscape ? 20 : 22),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text(titleText,
-            style: TextStyle(
+          title: Text(
+            titleText,
+            style: GoogleFonts.plusJakartaSans(
               color: NeonColors.primary,
-              fontSize: isLandscape ? 20 : 22,
-              fontWeight: FontWeight.bold,
-            )),
-          centerTitle: true,
+              fontSize: isLandscape ? 18 : 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.share, color: NeonColors.primary),
               onPressed: _shareScreenshot,
-            )
+            ),
+            const SizedBox(width: 8),
           ],
         ),
         body: SafeArea(
@@ -213,10 +218,14 @@ class _LadderResultScreenState extends State<LadderResultScreen>
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: NeonColors.primary, width: 2),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: NeonColors.stroke.withOpacity(0.1), width: 2),
                 boxShadow: [
-                  BoxShadow(color: NeonColors.primary.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                  BoxShadow(
+                    color: NeonColors.shadow.withOpacity(0.08),
+                    offset: const Offset(0, 8),
+                    blurRadius: 16,
+                  ),
                 ],
               ),
               child: Column(
@@ -324,10 +333,14 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               height: 90,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: NeonColors.primary, width: 2),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: NeonColors.stroke.withOpacity(0.1), width: 2),
                 boxShadow: [
-                  BoxShadow(color: NeonColors.primary.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                  BoxShadow(
+                    color: NeonColors.shadow.withOpacity(0.05),
+                    offset: const Offset(0, 4),
+                    blurRadius: 12,
+                  ),
                 ],
               ),
               child: Row(
@@ -526,9 +539,13 @@ class _LadderResultScreenState extends State<LadderResultScreen>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: NeonColors.primary, width: 2),
+            border: Border.all(color: NeonColors.stroke.withOpacity(0.1), width: 2.5),
             boxShadow: [
-              BoxShadow(color: NeonColors.primary.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8)),
+              BoxShadow(
+                color: NeonColors.shadow.withOpacity(0.1),
+                offset: const Offset(0, 8),
+                blurRadius: 20,
+              ),
             ],
           ),
           child: Column(

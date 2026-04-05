@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'dart:ui';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/neon_theme.dart';
-import '../../core/neon_button.dart';
-import 'ladder_game_mode.dart';
+import '../../core/widgets/neon_3d_button.dart';
+import '../../core/sound_manager.dart';
 import 'ladder_game_view_model.dart';
+import 'ladder_game_mode.dart';
 import 'ladder_painter.dart';
 import 'ladder_result_screen.dart';
-import '../../core/sound_manager.dart';
 
 class LadderGameScreen extends StatefulWidget {
   const LadderGameScreen({super.key});
@@ -34,8 +35,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
   bool _isNavigationTriggered = false;
   final List<TextEditingController> _controllers = [];
 
-  Timer? _autoIncrementTimer;
-
   @override
   void initState() {
     super.initState();
@@ -45,13 +44,17 @@ class _LadderGameScreenState extends State<LadderGameScreen>
 
     _shakeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
     );
     _shakeAnimation = TweenSequence<Offset>([
-      TweenSequenceItem(tween: Tween(begin: Offset.zero, end: const Offset(0.01, 0)), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: const Offset(0.01, 0), end: const Offset(-0.01, 0)), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: const Offset(-0.01, 0), end: Offset.zero), weight: 1),
-    ]).animate(CurvedAnimation(parent: _shakeController!, curve: Curves.linear));
+      TweenSequenceItem(tween: Tween(begin: Offset.zero, end: const Offset(4, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(4, 0), end: const Offset(-4, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(-4, 0), end: const Offset(3, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(3, 0), end: const Offset(-3, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(-3, 0), end: const Offset(2, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(2, 0), end: const Offset(-2, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(-2, 0), end: Offset.zero), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController!, curve: Curves.easeInOut));
   }
 
   void _updateControllers(LadderGameViewModel viewModel) {
@@ -78,7 +81,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
 
   @override
   void dispose() {
-    _autoIncrementTimer?.cancel();
     _shakeController?.dispose();
     for (var c in _activeControllers.values) {
       c.dispose();
@@ -169,46 +171,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     await Future.wait(futures);
   }
 
-  void _startAutoIncrement(bool increment, LadderGameViewModel viewModel) {
-    _autoIncrementTimer?.cancel();
-    _autoIncrementTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (increment) {
-        if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
-      } else {
-        if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
-      }
-    });
-  }
-
-  void _stopAutoIncrement() {
-    _autoIncrementTimer?.cancel();
-  }
-
-  void _showEditResultDialog(BuildContext context, int index, LadderGameViewModel viewModel) {
-    final controller = TextEditingController(text: viewModel.bottomResults[index]);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('결과 수정'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '결과를 입력하세요'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          TextButton(
-            onPressed: () {
-              viewModel.updateResult(index, controller.text);
-              _controllers[index].text = controller.text;
-              Navigator.pop(context);
-            },
-            child: const Text('저장'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // --- 가로선 갯수 직접 입력 다이얼로그 추가 ---
   void _showSectionCountDialog(BuildContext context, LadderGameViewModel viewModel) {
@@ -248,19 +210,32 @@ class _LadderGameScreenState extends State<LadderGameScreen>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        toolbarHeight: isLandscape ? 40 : 56,
-        title: Text('사다리 게임',
-          style: TextStyle(
+        centerTitle: true,
+        leadingWidth: 48,
+        toolbarHeight: isLandscape ? 48 : 64,
+        title: Text(
+          '사다리 게임',
+          style: GoogleFonts.plusJakartaSans(
             color: NeonColors.primary,
             fontSize: isLandscape ? 18 : 20,
-          )),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: NeonColors.primary, size: isLandscape ? 20 : 24),
-          onPressed: () => Navigator.pop(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: isLandscape ? 20 : 22),
+            onPressed: () => Navigator.pop(context),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
         ),
         actions: [
           IconButton(
-            onPressed: () => viewModel.toggleShroudActive(),
+            onPressed: () {
+              SoundManager().playWoosh();
+              viewModel.toggleShroudActive();
+            },
             icon: Icon(viewModel.isShroudActive ? Icons.visibility_off : Icons.visibility,
               color: viewModel.isShroudActive ? const Color(0xFFBE2D06) : NeonColors.primary)),
           IconButton(
@@ -276,10 +251,10 @@ class _LadderGameScreenState extends State<LadderGameScreen>
       ),
       body: SafeArea(
         child: AnimatedBuilder(
-          animation: _shakeAnimation!,
+          animation: _shakeController!,
           builder: (context, child) {
             return Transform.translate(
-              offset: _shakeAnimation!.value * MediaQuery.of(context).size.width,
+              offset: _shakeAnimation!.value,
               child: child,
             );
           },
@@ -300,37 +275,54 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                   Expanded(
                     child: Stack(
                       children: [
+                        // 사다리 렌더링 영역
                         Positioned(
                           top: topPadding + avatarSize,
                           left: 0, right: 0,
-                          height: ladderHeight + (resultSize / 2),
+                          height: ladderHeight,
                           child: CustomPaint(
                             painter: LadderPainter(
                               playerCount: viewModel.playerCount,
                               sectionCount: viewModel.sectionCount,
                               ladderBars: viewModel.ladderBars,
-                              activePathIndices: _activeControllers.keys.toSet(),
-                              participantColors: viewModel.currentParticipants.map((p) => p.color).toList(),
+                              activePathIndices: _activeAnimations.keys.toSet(),
                               animationMap: _activeAnimations,
+                              participantColors: viewModel.currentParticipants.map((p) => p.color).toList(),
                               viewModel: viewModel,
                               ladderHeight: ladderHeight,
                             ),
                           ),
                         ),
+
+                        // 상단 참가자 캐릭터
                         ...List.generate(viewModel.playerCount, (i) {
                           final p = viewModel.currentParticipants[i];
+                          final bool isSelected = _selectedStartIndices.contains(i);
                           return Positioned(
                             top: topPadding,
                             left: gap * (i + 1) - (avatarSize / 2),
                             child: GestureDetector(
-                              onTap: () => _runAnimation(i, viewModel),
-                              child: Container(
+                              onTap: () {
+                                SoundManager().playTick();
+                                _runAnimation(i, viewModel);
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
                                 width: avatarSize, height: avatarSize,
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(0xFFF9F7F2),
-                                  border: Border.all(color: _selectedStartIndices.contains(i) ? p.color : p.color.withOpacity(0.4), width: 2),
-                                  boxShadow: _selectedStartIndices.contains(i) ? [BoxShadow(color: p.color.withOpacity(0.5), blurRadius: 8)] : null,
+                                  color: const Color(0xFFF9F6EE), // 파스텔 크림
+                                  borderRadius: BorderRadius.circular(avatarSize * 0.4),
+                                  border: Border.all(
+                                    color: isSelected ? p.color : const Color(0xFFD4B483), // 나무 느낌 경계
+                                    width: isSelected ? 3.5 : 2.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isSelected ? p.color.withOpacity(0.5) : Colors.black.withOpacity(0.08),
+                                      offset: Offset(0, isSelected ? 6 : 4),
+                                      blurRadius: isSelected ? 12 : 6,
+                                    ),
+                                  ],
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(p.emoji, style: TextStyle(fontSize: emojiSize)),
@@ -338,6 +330,8 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                             ),
                           );
                         }),
+
+                        // 하단 결과 뱃지
                         Positioned(
                           top: topPadding + avatarSize + ladderHeight - 2,
                           left: 0, right: 0,
@@ -348,52 +342,57 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                               children: List.generate(viewModel.playerCount, (i) {
                                 final isTarget = _finishedEndIndices.contains(i);
                                 final resultText = viewModel.bottomResults[i];
-                                
                                 final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
                                 final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
                                 final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
                                 final bool isPass = (resultText.contains('통과') || resultText.contains('꽝') || resultText.contains('얻어먹기')) && !isOrderMode;
                                 
+                                // 결과 텍스트에서 이모지 제거 (정규식 사용)
+                                final cleanResultText = resultText.replaceAll(RegExp(r'[\u{1f300}-\u{1f5ff}\u{1f600}-\u{1f64f}\u{1f680}-\u{1f6ff}\u{1f700}-\u{1f77f}\u{1f780}-\u{1f7ff}\u{1f800}-\u{1f8ff}\u{1f900}-\u{1f9ff}\u{1fa00}-\u{1faff}\u{2600}-\u{26ff}\u{2700}-\u{27bf}\u{fe00}-\u{fe0f}]', unicode: true), '');
+
                                 Color statusColor;
                                 if (isPass) {
-                                  statusColor = NeonColors.primary;
+                                  statusColor = const Color(0xFF8DAA5D); // 대나무 그린
+                                } else if (isWinMode) {
+                                  statusColor = const Color(0xFFD4B483); // 골드/우드
+                                } else if (isTreatMode) {
+                                  statusColor = const Color(0xFFE2725B); // 테라코타
+                                } else if (isOrderMode) {
+                                  statusColor = const Color(0xFF5D4037); // 다크 브라운
                                 } else {
-                                  if (isWinMode) {
-                                    statusColor = Colors.amber;
-                                  } else if (isTreatMode) {
-                                    statusColor = Colors.orange;
-                                  } else if (isOrderMode) {
-                                    statusColor = NeonColors.primary;
-                                  } else {
-                                    statusColor = const Color(0xFFBE2D06);
-                                  }
+                                  statusColor = const Color(0xFFBE2D06);
                                 }
   
                                 return Positioned(
                                   left: gap * (i + 1) - (gap * 0.9 / 2),
-                                  child: GestureDetector(
-                                    onTap: isOrderMode ? null : () => _showEditResultDialog(context, i, viewModel),
-                                    child: Container(
-                                      width: gap * 0.9, height: resultSize * 0.75,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(resultSize * 0.35),
-                                        color: Colors.white,
-                                        border: Border.all(
-                                          color: isTarget ? statusColor : statusColor.withOpacity(0.3), 
-                                          width: (!isPass || isOrderMode) ? 3.0 : 2.5
-                                        ),
-                                        boxShadow: (!isPass || isOrderMode) && isTarget 
-                                            ? [BoxShadow(color: statusColor.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)] 
-                                            : null,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    width: gap * 0.9, height: resultSize * 0.75,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: const Color(0xFFEFEBE9), // 아주 밝은 우드톤
+                                      border: Border.all(
+                                        color: isTarget ? statusColor : const Color(0xFFD7CCC8), 
+                                        width: isTarget ? 3.5 : 2.5
                                       ),
-                                      child: Center(
-                                        child: FittedBox(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                            child: Text(resultText, textAlign: TextAlign.center,
-                                              style: TextStyle(color: isTarget ? statusColor : NeonColors.textMain,
-                                                fontSize: fontSize, fontWeight: FontWeight.bold)),
-                                          ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: isTarget ? statusColor.withOpacity(0.4) : Colors.black.withOpacity(0.05),
+                                          offset: const Offset(0, 4),
+                                          blurRadius: isTarget ? 8 : 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: FittedBox(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                                          child: Text(cleanResultText.trim(), textAlign: TextAlign.center,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              color: isTarget ? statusColor : const Color(0xFF5D4037),
+                                              fontSize: fontSize, 
+                                              fontWeight: FontWeight.w900,
+                                            )),
                                         ),
                                       ),
                                     ),
@@ -403,29 +402,34 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                             ),
                           ),
                         ),
+
+                        // 중앙 가림막 (Shroud) & 설정 패널
                         Positioned(
-                          top: topPadding + avatarSize + 20,
+                          top: topPadding + avatarSize,
                           left: 0, right: 0,
-                          height: ladderHeight - 40,
+                          height: ladderHeight,
                           child: IgnorePointer(
                             ignoring: _isAnimating,
                             child: Stack(
                               children: [
-                                Positioned.fill(
-                                  child: AnimatedOpacity(
-                                    duration: const Duration(milliseconds: 400),
-                                    opacity: (viewModel.isShroudActive && !_isAnimating) ? 1.0 : 0.0,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.95),
-                                        border: Border.all(color: NeonColors.primary, width: 3),
-                                        borderRadius: BorderRadius.circular(20),
+                                AnimatedPositioned(
+                                  duration: const Duration(milliseconds: 650),
+                                  curve: Curves.fastOutSlowIn,
+                                  top: (viewModel.isShroudActive && !_isAnimating) ? 0 : -ladderHeight - 50,
+                                  left: 0, right: 0,
+                                  height: ladderHeight,
+                                  child: Container(
+                                    decoration: NeonTheme.getCardDecoration(radius: 32),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(32),
+                                      child: CustomPaint(
+                                        painter: _PatternPainter(color: const Color(0xFF8DAA5D).withOpacity(0.06)),
                                       ),
                                     ),
                                   ),
                                 ),
-                                if (!_isAnimating)
-                                  Center(child: _configPanel(context, viewModel)),
+                                if (viewModel.isShroudActive && !_isAnimating)
+                                  Center(child: _configPanel(context, viewModel, ladderHeight)),
                               ],
                             ),
                           ),
@@ -442,72 +446,89 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     );
   }
 
-  Widget _configPanel(BuildContext context, LadderGameViewModel viewModel) {
+  Widget _configPanel(BuildContext context, LadderGameViewModel viewModel, double ladderHeight) {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('가로선 (터치하여 직접 수정)', 
-            style: TextStyle(color: NeonColors.textSub, fontSize: isLandscape ? 12 : 14)),
-          SizedBox(height: isLandscape ? 8 : 15),
+          Text('가로선 설정', 
+            style: GoogleFonts.plusJakartaSans(
+              color: NeonColors.textSub, 
+              fontSize: isLandscape ? 12 : 14,
+              fontWeight: FontWeight.bold,
+            )),
+          const SizedBox(height: 12),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _smallCircleButton('-', () {
-                SoundManager().playTick();
-                if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
-              }, onLongPress: () => _startAutoIncrement(false, viewModel), onLongPressEnd: _stopAutoIncrement),
+              Neon3DButton(
+                size: 40,
+                onPressed: () {
+                  SoundManager().playTick();
+                  if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
+                },
+                child: const Icon(Icons.remove, color: Colors.white, size: 20),
+              ),
               
-              SizedBox(width: isLandscape ? 15 : 25),
-              
-              // 중앙 숫자 텍스트 (터치 가능하게)
-              InkWell(
-                onTap: () => _showSectionCountDialog(context, viewModel),
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: isLandscape ? 10 : 15, vertical: 5),
-                      child: Text('${viewModel.sectionCount}줄',
-                    style: TextStyle(color: NeonColors.textMain, fontWeight: FontWeight.bold, fontSize: isLandscape ? 22 : 28)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: InkWell(
+                  onTap: () => _showSectionCountDialog(context, viewModel),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text('${viewModel.sectionCount}줄',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: NeonColors.primary, 
+                        fontWeight: FontWeight.w900, 
+                        fontSize: isLandscape ? 24 : 32,
+                      )),
+                  ),
                 ),
               ),
               
-              SizedBox(width: isLandscape ? 15 : 25),
-              
-              _smallCircleButton('+', () {
-                SoundManager().playTick();
-                if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
-              }, onLongPress: () => _startAutoIncrement(true, viewModel), onLongPressEnd: _stopAutoIncrement),
+              Neon3DButton(
+                size: 40,
+                onPressed: () {
+                  SoundManager().playTick();
+                  if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
+                },
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
+              ),
             ],
           ),
-          SizedBox(height: isLandscape ? 12 : 25),
-          NeonButton(
-            text: 'START',
-            width: isLandscape ? 120 : 140,
-            height: isLandscape ? 38 : 45,
-            color: NeonColors.primary,
-            onPressed: () => _startAll(viewModel),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: isLandscape ? 160 : 200,
+            child: Neon3DBigButton(
+              label: 'START',
+              onPressed: () => _startAll(viewModel),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _smallCircleButton(String text, VoidCallback onPressed, {VoidCallback? onLongPress, VoidCallback? onLongPressEnd}) {
-    const color = NeonColors.primary;
-    return GestureDetector(
-      onLongPressStart: (_) => onLongPress?.call(),
-      onLongPressEnd: (_) => onLongPressEnd?.call(),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
-          width: 45, height: 45,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
-          alignment: Alignment.center,
-          child: Text(text, style: const TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
-        ),
-      ),
-    );
+class _PatternPainter extends CustomPainter {
+  final Color color;
+  _PatternPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.0;
+    
+    const double step = 20.0;
+    for (double i = -size.height; i < size.width; i += step) {
+      canvas.drawLine(Offset(i, 0), Offset(i + size.height, size.height), paint);
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

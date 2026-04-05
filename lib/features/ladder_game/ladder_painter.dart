@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'ladder_game_view_model.dart';
-import '../../core/neon_theme.dart';
 
 class LadderPainter extends CustomPainter {
   final int playerCount;
@@ -28,25 +27,43 @@ class LadderPainter extends CustomPainter {
     final sectionWidth = size.width / (playerCount + 1);
     final sectionHeight = ladderHeight / (sectionCount + 1);
 
-    void drawLadderLine(Offset p1, Offset p2, Color color, {double width = 2.0}) {
-      final paint = Paint()
-        ..color = color
-        ..strokeWidth = width
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke;
-      canvas.drawLine(p1, p2, paint);
+    // 대나무 기본 페인트
+    final bambooPaint = Paint()
+      ..color = const Color(0xFF8DAA5D) // 대나무 그린
+      ..strokeWidth = 4.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    // 마디(Joint) 페인트
+    final jointPaint = Paint()
+      ..color = const Color(0xFF4A5D23).withOpacity(0.6)
+      ..strokeWidth = 5.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    // 대나무 그리기 헬퍼 함수
+    void drawBamboo(Offset p1, Offset p2) {
+      canvas.drawLine(p1, p2, bambooPaint);
+      
+      // 마디 그리기 (일정 간격으로)
+      final distance = (p2 - p1).distance;
+      final direction = (p2 - p1) / distance;
+      
+      int jointCount = (distance / 45).floor();
+      for (int k = 0; k <= jointCount; k++) {
+        final jointPos = p1 + direction * (k * (distance / jointCount.clamp(1, 100)));
+        final jointNormal = Offset(-direction.dy, direction.dx) * 3.5;
+        canvas.drawLine(jointPos - jointNormal, jointPos + jointNormal, jointPaint);
+      }
     }
 
-    // 기본 사다리 선 색상 (숲 테마의 브라운)
-    final baseLineColor = NeonColors.primary.withOpacity(0.2);
-    
-    // 수직선 그리기
+    // 수직선 그리기 (대나무)
     for (int i = 0; i < playerCount; i++) {
       final x = sectionWidth * (i + 1);
-      drawLadderLine(Offset(x, 0), Offset(x, ladderHeight), baseLineColor, width: 2.0);
+      drawBamboo(Offset(x, 0), Offset(x, ladderHeight));
     }
 
-    // 가로선 그리기
+    // 가로선 그리기 (대나무)
     for (int i = 0; i < playerCount - 1; i++) {
       final x1 = sectionWidth * (i + 1);
       final x2 = sectionWidth * (i + 2);
@@ -56,7 +73,7 @@ class LadderPainter extends CustomPainter {
           final yBase = sectionHeight * (j + 1);
           final y1 = yBase + (bar.startYOffset * sectionHeight);
           final y2 = yBase + (bar.endYOffset * sectionHeight);
-          drawLadderLine(Offset(x1, y1), Offset(x2, y2), baseLineColor, width: 2.0);
+          drawBamboo(Offset(x1, y1), Offset(x2, y2));
         }
       }
     }
@@ -83,17 +100,20 @@ class LadderPainter extends CustomPainter {
         final currentLength = totalLength * anim.value.clamp(0.0, 1.0);
         
         double drawLength = 0;
+        
+        // 경로 외곽 선 (Glow 효과 - 대나무 위에 자연스럽게 얹힘)
+        final shadowPaint = Paint()
+          ..color = color.withOpacity(0.3)
+          ..strokeWidth = 10.0
+          ..style = PaintingStyle.stroke
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0)
+          ..strokeCap = StrokeCap.round;
+
+        // 주 경로 선
         final corePaint = Paint()
           ..color = color
           ..strokeWidth = 5.0
           ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round;
-
-        final shadowPaint = Paint()
-          ..color = color.withOpacity(0.2)
-          ..strokeWidth = 8.0
-          ..style = PaintingStyle.stroke
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0)
           ..strokeCap = StrokeCap.round;
 
         for (final metric in pathMetrics) {
