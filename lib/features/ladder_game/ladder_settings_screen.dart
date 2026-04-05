@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -20,6 +22,8 @@ class LadderSettingsScreen extends StatefulWidget {
 
 class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
   final List<TextEditingController> _itemControllers = [];
+  final TextEditingController _playerCountController = TextEditingController();
+  Timer? _stepTimer;
 
   @override
   void initState() {
@@ -27,7 +31,12 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<LadderGameViewModel>();
       viewModel.setMode(widget.mode);
-      _syncControllersWithViewModel(viewModel);
+      if (mounted) {
+        setState(() {
+          _syncControllersWithViewModel(viewModel);
+          _playerCountController.text = '${viewModel.playerCount}';
+        });
+      }
     });
   }
 
@@ -40,6 +49,31 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     for (var item in viewModel.penaltyContents) {
       _itemControllers.add(TextEditingController(text: item));
     }
+    _playerCountController.text = '${viewModel.playerCount}';
+  }
+
+  void _startStepping(bool isIncrement, LadderGameViewModel viewModel) {
+    _stopStepping();
+    final action = () {
+      if (isIncrement) {
+        if (viewModel.playerCount < 20) {
+          viewModel.setPlayerCount(viewModel.playerCount + 1);
+          _syncControllersWithViewModel(viewModel);
+        }
+      } else {
+        if (viewModel.playerCount > 2) {
+          viewModel.setPlayerCount(viewModel.playerCount - 1);
+          _syncControllersWithViewModel(viewModel);
+        }
+      }
+    };
+    action();
+    _stepTimer = Timer.periodic(const Duration(milliseconds: 200), (_) => action());
+  }
+
+  void _stopStepping() {
+    _stepTimer?.cancel();
+    _stepTimer = null;
   }
 
   @override
@@ -47,6 +81,8 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     for (var controller in _itemControllers) {
       controller.dispose();
     }
+    _playerCountController.dispose();
+    _stopStepping();
     super.dispose();
   }
 
@@ -70,22 +106,45 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   _buildParticipantCard(viewModel),
                   const SizedBox(height: 20),
 
-                  // 2. Ladder Speed Card
-                  _buildSpeedCard(viewModel),
-                  const SizedBox(height: 20),
+                  // 2. Ladder Speed Card (Order: Conditional based on mode)
+                  if (widget.mode != LadderGameMode.team) ...[
+                    _buildSpeedCard(viewModel),
+                    const SizedBox(height: 20),
+                  ],
 
                   // 3. Mode Specific Content (The 3rd card in the sequence)
                   _buildModeSpecificCard(viewModel),
+                  
+                  // if team mode, speed comes after configuration
+                  if (widget.mode == LadderGameMode.team) ...[
+                    const SizedBox(height: 20),
+                    _buildSpeedCard(viewModel),
+                  ],
+                  
                   const SizedBox(height: 32),
 
-                  // 4. Start Button (Big 3D Action)
-                  Neon3DBigButton(
-                    label: '게임 시작',
-                    onPressed: () {
-                      _applyAllChanges(viewModel);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LadderGameScreen()),
+                  Builder(
+                    builder: (context) {
+                      final bool isManualMode = widget.mode == LadderGameMode.manual;
+                      bool canStart = true;
+                      if (isManualMode) {
+                        for (var controller in _itemControllers) {
+                          if (controller.text.trim().isEmpty) {
+                            canStart = false;
+                            break;
+                          }
+                        }
+                      }
+
+                      return Neon3DBigButton(
+                        label: '게임 시작',
+                        onPressed: canStart ? () {
+                          _applyAllChanges(viewModel);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LadderGameScreen()),
+                          );
+                        } : null,
                       );
                     },
                   ),
@@ -93,7 +152,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               ),
               const SizedBox(height: 60),
 
-              // 5. Decorative Footer
               _buildFooter(),
             ],
           ),
@@ -115,7 +173,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
         title,
         style: GoogleFonts.plusJakartaSans(
           color: NeonColors.primary,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w900,
           fontSize: 20,
         ),
       ),
@@ -123,7 +181,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
         TextButton.icon(
           onPressed: () {
             viewModel.resetSettings();
-            // ViewModel이 notifyListeners를 호출하므로, 여기서 동기화만 해주면 build가 트리거됨
             _syncControllersWithViewModel(viewModel);
             setState(() {});
           },
@@ -179,36 +236,69 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Neon3DButton(
-                size: 64,
-                onPressed: () {
-                  if (viewModel.playerCount > 2) {
-                    viewModel.setPlayerCount(viewModel.playerCount - 1);
-                    _syncControllersWithViewModel(viewModel);
-                  }
-                },
-                child: const Icon(Icons.remove, color: Colors.white, size: 32),
+              GestureDetector(
+                onLongPress: () => _startStepping(false, viewModel),
+                onLongPressUp: _stopStepping,
+                child: Neon3DButton(
+                  size: 52,
+                  onPressed: () {
+                    if (viewModel.playerCount > 2) {
+                      viewModel.setPlayerCount(viewModel.playerCount - 1);
+                      _syncControllersWithViewModel(viewModel);
+                    }
+                  },
+                  child: const Icon(Icons.remove, color: Colors.white, size: 24),
+                ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Text(
-                  '${viewModel.playerCount}',
+              Container(
+                width: 100,
+                alignment: Alignment.center,
+                child: TextField(
+                  controller: _playerCountController,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 56,
+                    fontSize: 52, // Slightly smaller font
                     fontWeight: FontWeight.w900,
                     color: NeonColors.primary,
                   ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onChanged: (val) {
+                    final n = int.tryParse(val);
+                    if (n != null) {
+                      if (n >= 2 && n <= 20) {
+                        viewModel.setPlayerCount(n);
+                      }
+                    }
+                  },
+                  onSubmitted: (val) {
+                    final n = int.tryParse(val);
+                    if (n == null || n < 2) viewModel.setPlayerCount(2);
+                    if (n != null && n > 20) viewModel.setPlayerCount(20);
+                    _syncControllersWithViewModel(viewModel);
+                  },
                 ),
               ),
-              Neon3DButton(
-                size: 64,
-                onPressed: () {
-                  if (viewModel.playerCount < 20) {
-                    viewModel.setPlayerCount(viewModel.playerCount + 1);
-                    _syncControllersWithViewModel(viewModel);
-                  }
-                },
-                child: const Icon(Icons.add, color: Colors.white, size: 32),
+              GestureDetector(
+                onLongPress: () => _startStepping(true, viewModel),
+                onLongPressUp: _stopStepping,
+                child: Neon3DButton(
+                  size: 52, // Slightly smaller to prevent overflow
+                  onPressed: () {
+                    if (viewModel.playerCount < 20) {
+                      viewModel.setPlayerCount(viewModel.playerCount + 1);
+                      _syncControllersWithViewModel(viewModel);
+                    }
+                  },
+                  child: const Icon(Icons.add, color: Colors.white, size: 24),
+                ),
               ),
             ],
           ),
@@ -269,104 +359,107 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     if (widget.mode == LadderGameMode.order) return const SizedBox.shrink();
 
     if (widget.mode == LadderGameMode.team) {
-      return Column(
-        children: [
-           Container(
-            padding: const EdgeInsets.all(28),
-            decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFF5F4EB)),
-            child: Column(
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFF5F4EB)),
+        child: Column(
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(color: NeonColors.pointGreen, borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.people_alt_outlined, size: 22, color: NeonColors.primary),
-                    ),
-                    const SizedBox(width: 14),
-                    Text('팀 수', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: NeonColors.primary)),
-                  ],
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(color: NeonColors.pointGreen, borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(Icons.people_alt_outlined, size: 22, color: NeonColors.primary),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(width: 14),
+                Text('팀 나누기 구성', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w900, color: NeonColors.primary)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Team Count Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('만들 팀 수', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: NeonColors.textMain)),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Neon3DButton(
-                      size: 56,
+                      size: 40,
                       onPressed: () {
                         if (viewModel.teamCount > 2) {
-                           viewModel.setTeamCount(viewModel.teamCount - 1);
-                           _syncControllersWithViewModel(viewModel);
+                          viewModel.setTeamCount(viewModel.teamCount - 1);
+                          _syncControllersWithViewModel(viewModel);
                         }
                       },
-                      child: const Icon(Icons.remove, color: Colors.white, size: 24),
+                      child: const Icon(Icons.remove, color: Colors.white, size: 18),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text('${viewModel.teamCount}', style: GoogleFonts.plusJakartaSans(fontSize: 36, fontWeight: FontWeight.w900, color: NeonColors.primary)),
+                    Container(
+                      width: 44,
+                      alignment: Alignment.center,
+                      child: Text('${viewModel.teamCount}', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: NeonColors.primary)),
                     ),
                     Neon3DButton(
-                      size: 56,
+                      size: 40,
                       onPressed: () {
                         if (viewModel.teamCount < viewModel.playerCount) {
                           viewModel.setTeamCount(viewModel.teamCount + 1);
                           _syncControllersWithViewModel(viewModel);
                         }
                       },
-                      child: const Icon(Icons.add, color: Colors.white, size: 24),
+                      child: const Icon(Icons.add, color: Colors.white, size: 18),
                     ),
                   ],
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
-            decoration: NeonTheme.getCardDecoration(),
-            child: Row(
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Divider(height: 1, color: Color(0xFFE5E0D5)),
+            ),
+            // Team Leader Toggle Row
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('팀장 선정', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: NeonColors.primary)),
+                Text('팀장 랜덤 선정', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: NeonColors.textMain)),
                 GestureDetector(
                   onTap: () => viewModel.setHasTeamLeader(!viewModel.hasTeamLeader),
                   child: Container(
-                    width: 110,
-                    height: 44,
-                    decoration: BoxDecoration(color: const Color(0xFFE9E9E0), borderRadius: BorderRadius.circular(22)),
+                    width: 100,
+                    height: 40,
+                    decoration: BoxDecoration(color: const Color(0xFFE9E9E0), borderRadius: BorderRadius.circular(20)),
                     child: Stack(
                       children: [
                         AnimatedPositioned(
                           duration: const Duration(milliseconds: 200),
-                          left: viewModel.hasTeamLeader ? 58 : 4,
+                          left: viewModel.hasTeamLeader ? 50 : 4,
                           top: 4,
                           child: Container(
-                            width: 48,
-                            height: 36,
+                            width: 46,
+                            height: 32,
                             decoration: BoxDecoration(
                               color: NeonColors.primary,
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), offset: const Offset(0, 2), blurRadius: 4)],
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), offset: const Offset(0, 2), blurRadius: 3)],
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              viewModel.hasTeamLeader ? '예' : '아니오',
-                              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                              viewModel.hasTeamLeader ? 'ON' : 'OFF',
+                              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
                             ),
                           ),
                         ),
                         if (!viewModel.hasTeamLeader)
-                          const Positioned(right: 14, top: 0, bottom: 0, child: Center(child: Text('예', style: TextStyle(color: NeonColors.textSub, fontSize: 12, fontWeight: FontWeight.bold)))),
+                          const Positioned(right: 12, top: 0, bottom: 0, child: Center(child: Text('ON', style: TextStyle(color: NeonColors.textSub, fontSize: 11, fontWeight: FontWeight.bold)))),
                         if (viewModel.hasTeamLeader)
-                          const Positioned(left: 14, top: 0, bottom: 0, child: Center(child: Text('아니오', style: TextStyle(color: NeonColors.textSub, fontSize: 12, fontWeight: FontWeight.bold)))),
+                          const Positioned(left: 12, top: 0, bottom: 0, child: Center(child: Text('OFF', style: TextStyle(color: NeonColors.textSub, fontSize: 11, fontWeight: FontWeight.bold)))),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
@@ -430,7 +523,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   GestureDetector(
                     onTap: () {
                       if (_itemControllers.length > 1) {
-                        viewModel.setPenaltyCount(viewModel.penaltyCount - 1);
+                        viewModel.removePenaltyItem(index);
                         setState(() => _syncControllersWithViewModel(viewModel));
                       }
                     },
@@ -443,7 +536,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
           const SizedBox(height: 20),
           GestureDetector(
             onTap: () {
-              viewModel.setPenaltyCount(viewModel.penaltyCount + 1);
+              viewModel.addPenaltyItem();
               setState(() => _syncControllersWithViewModel(viewModel));
             },
             child: Container(
@@ -509,12 +602,12 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
 
   String _getFooterQuote(LadderGameMode mode) {
     switch (mode) {
-      case LadderGameMode.penalty: return "피할 수 없으면 즐겨라! (하지만 이번엔 피하고 싶을걸?)";
-      case LadderGameMode.win: return "우리 중 가장 운 좋은 사람은 누구일까요?";
-      case LadderGameMode.treat: return "지갑은 가볍게, 마음은 즐겁게! 오늘 골든벨은 누가?";
-      case LadderGameMode.order: return "운명은 정해졌습니다. 시작은 당신의 몫!";
-      case LadderGameMode.team: return "최고의 전략은 최고의 팀워크에서 나옵니다!";
-      case LadderGameMode.manual: return "당신만의 규칙으로 게임을 더 즐겁게!";
+      case LadderGameMode.penalty: return "피할 수 없으면 즐겨라!\n피하고 싶어도 사다리는 정직합니다.";
+      case LadderGameMode.win: return "우리 중 가장 운좋은 사람은\n과연 누구일까요? 행운을 빕니다!";
+      case LadderGameMode.treat: return "지갑은 가볍게, 마음은 즐겁게!\n오늘의 골든벨 주인공은?";
+      case LadderGameMode.order: return "운명은 정해졌습니다.\n시작은 당신의 몫입니다!";
+      case LadderGameMode.team: return "최고의 전략은 최고의 팀워크에서\n나옵니다! 팀원들을 믿으세요.";
+      case LadderGameMode.manual: return "당신만의 규칙으로 게임을 더 즐겁게 만드세요!";
     }
   }
 
@@ -550,8 +643,8 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
       case LadderGameMode.penalty: return '벌칙 설정';
       case LadderGameMode.win: return '당첨 설정';
       case LadderGameMode.treat: return '쏘기 설정';
-      case LadderGameMode.manual: return '입력 구성';
-      default: return '설정';
+      case LadderGameMode.manual: return '내용 입력 구성';
+      default: return '설정 입력';
     }
   }
 

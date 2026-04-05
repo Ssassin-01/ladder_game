@@ -152,13 +152,19 @@ class LadderGameViewModel extends ChangeNotifier {
     }
 
     _currentMode = mode;
-
-    // 새로운 모드의 설정을 불러오거나 새로운 기본값 할당
-    if (_modeCounts.containsKey(mode) && _modeContents[mode] != null && _modeContents[mode]!.isNotEmpty) {
-      _penaltyCount = _modeCounts[mode]!;
-      _penaltyContents = List.from(_modeContents[mode]!);
+    
+    // 직접 입력(Manual) 모드일 경우 무조건 참가자 수와 항목 수 동기화
+    if (mode == LadderGameMode.manual) {
+      _penaltyCount = _playerCount;
+      _penaltyContents = List.generate(_playerCount, (i) => ''); // 처음엔 비워둘 수 있음 (힌트 보이기 위해)
     } else {
-      _initNewModeDefaults(mode);
+      // 새로운 모드의 설정을 불러오거나 새로운 기본값 할당
+      if (_modeCounts.containsKey(mode) && _modeContents[mode] != null && _modeContents[mode]!.isNotEmpty) {
+        _penaltyCount = _modeCounts[mode]!;
+        _penaltyContents = List.from(_modeContents[mode]!);
+      } else {
+        _initNewModeDefaults(mode);
+      }
     }
 
     // 최종 정합성 체크: 순서 모드를 제외하고 항상 최소 1개는 있어야 함
@@ -177,20 +183,20 @@ class LadderGameViewModel extends ChangeNotifier {
   void _initNewModeDefaults(LadderGameMode mode) {
     if (mode == LadderGameMode.penalty) {
       _penaltyCount = 1;
-      _penaltyContents = ['벌칙 1 💀'];
+      _penaltyContents = ['벌칙 ✨'];
     } else if (mode == LadderGameMode.win) {
       _penaltyCount = 1;
-      _penaltyContents = ['당첨 1 🎁'];
+      _penaltyContents = ['당첨 🎁'];
     } else if (mode == LadderGameMode.treat) {
       _penaltyCount = 1;
-      _penaltyContents = ['내가 쏜다! 1 ☕'];
+      _penaltyContents = ['내가 쏜다! ☕'];
     } else if (mode == LadderGameMode.team) {
       _teamCount = 2;
       _penaltyCount = 2;
       _penaltyContents = ['1팀', '2팀'];
     } else if (mode == LadderGameMode.manual) {
       _penaltyCount = 1;
-      _penaltyContents = ['내용 입력 ✨'];
+      _penaltyContents = ['미션'];
     } else if (mode == LadderGameMode.order) {
       _penaltyCount = 0;
       _penaltyContents = [];
@@ -199,11 +205,12 @@ class LadderGameViewModel extends ChangeNotifier {
 
   // 팀 나누기 전용: 팀 수 설정
   void setTeamCount(int count) {
-    _teamCount = count.clamp(2, (_playerCount / 1).floor());
+    _teamCount = count.clamp(2, _playerCount);
     _penaltyCount = _teamCount;
     // 팀 라벨 재구성
     _penaltyContents = List.generate(_teamCount, (i) => '${i + 1}팀');
     _generateResults();
+    _saveSettings();
     notifyListeners();
   }
 
@@ -282,8 +289,41 @@ class LadderGameViewModel extends ChangeNotifier {
     if (index >= 0 && index < _penaltyContents.length) {
       _penaltyContents[index] = content;
       _generateResults();
+      _saveSettings();
       notifyListeners();
     }
+  }
+
+  void removePenaltyItem(int index) {
+    if (_penaltyContents.length > 1 && index >= 0 && index < _penaltyContents.length) {
+      _penaltyContents.removeAt(index);
+      _penaltyCount = _penaltyContents.length;
+      
+      // 직접 입력 모드 시 참가자 수도 동기화
+      if (_currentMode == LadderGameMode.manual) {
+        _playerCount = _penaltyCount;
+      }
+      
+      _generateResults();
+      _initData(); // 참가자 데이터 동기화
+      _saveSettings();
+      notifyListeners();
+    }
+  }
+
+  void addPenaltyItem() {
+    _penaltyContents.add('');
+    _penaltyCount = _penaltyContents.length;
+    
+    // 직접 입력 모드 시 참가자 수도 동기화
+    if (_currentMode == LadderGameMode.manual) {
+      _playerCount = _penaltyCount.clamp(2, 20); // 20명 제한 유지
+    }
+    
+    _generateResults();
+    _initData(); // 참가자 데이터 동기화 추가
+    _saveSettings();
+    notifyListeners();
   }
 
   // 모든 설정을 기본값(5명, 속도 3, 모드별 기본 내용 등)으로 초기화
@@ -329,8 +369,12 @@ class LadderGameViewModel extends ChangeNotifier {
 
     if (_currentMode == LadderGameMode.manual) {
       _penaltyCount = _playerCount;
-      if (_penaltyContents.length != _playerCount) {
-        _penaltyContents = List.generate(_playerCount, (i) => '');
+      if (_penaltyContents.length < _playerCount) {
+        // 기존 데이터를 보존하면서 늘리기
+        _penaltyContents.addAll(List.generate(_playerCount - _penaltyContents.length, (_) => ''));
+      } else if (_penaltyContents.length > _playerCount) {
+        // 기존 데이터를 줄이기
+        _penaltyContents = _penaltyContents.sublist(0, _playerCount);
       }
     }
     _generateResults();
@@ -384,7 +428,9 @@ class LadderGameViewModel extends ChangeNotifier {
         indices.shuffle();
 
         for (int i = 0; i < _penaltyCount; i++) {
-          results[indices[i]] = _penaltyContents[i];
+          String content = _penaltyContents[i].trim();
+          if (content.isEmpty) content = '벌칙 ✨';
+          results[indices[i]] = content;
         }
         _bottomResults = results;
         return;
@@ -396,7 +442,9 @@ class LadderGameViewModel extends ChangeNotifier {
         indices.shuffle();
 
         for (int i = 0; i < _penaltyCount; i++) {
-          results[indices[i]] = _penaltyContents[i];
+          String content = _penaltyContents[i].trim();
+          if (content.isEmpty) content = '당첨 🎁';
+          results[indices[i]] = content;
         }
         _bottomResults = results;
         return;
@@ -408,7 +456,9 @@ class LadderGameViewModel extends ChangeNotifier {
         indices.shuffle();
 
         for (int i = 0; i < _penaltyCount; i++) {
-          results[indices[i]] = _penaltyContents[i];
+          String content = _penaltyContents[i].trim();
+          if (content.isEmpty) content = '내가 쏜다! ☕';
+          results[indices[i]] = content;
         }
         _bottomResults = results;
         return;
@@ -473,11 +523,19 @@ class LadderGameViewModel extends ChangeNotifier {
         _penaltyContents = _penaltyContents.sublist(0, _playerCount);
       }
     } else {
-    if (_penaltyCount > _playerCount && _currentMode != LadderGameMode.manual) {
-      _penaltyCount = _playerCount - 1;
-      if (_penaltyCount < 1) _penaltyCount = 1;
-      _penaltyContents = _penaltyContents.sublist(0, _penaltyCount);
-    }
+      if (_currentMode == LadderGameMode.team) {
+        if (_teamCount > _playerCount) {
+          _teamCount = _playerCount;
+          _penaltyCount = _teamCount;
+          _penaltyContents = List.generate(_teamCount, (i) => '${i + 1}팀');
+        }
+      } else {
+        if (_penaltyCount > _playerCount) {
+          _penaltyCount = _playerCount - 1;
+          if (_penaltyCount < 1) _penaltyCount = 1;
+          _penaltyContents = _penaltyContents.sublist(0, _penaltyCount);
+        }
+      }
     }
     _initData();
     _saveSettings();

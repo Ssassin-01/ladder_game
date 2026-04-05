@@ -110,12 +110,12 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
 
 class Neon3DBigButton extends StatefulWidget {
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const Neon3DBigButton({
     super.key,
     required this.label,
-    required this.onPressed,
+    this.onPressed,
   });
 
   @override

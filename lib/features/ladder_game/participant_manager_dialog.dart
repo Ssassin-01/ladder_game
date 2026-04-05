@@ -32,6 +32,9 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
     _focusNodes.clear();
 
     for (int i = 0; i < viewModel.playerCount; i++) {
+      // 안전을 위해 currentParticipants 범위를 확인합니다.
+      if (i >= viewModel.currentParticipants.length) break;
+      
       final p = viewModel.currentParticipants[i];
       _nameControllers.add(TextEditingController(text: p.customName ?? p.animalType));
       final fn = FocusNode();
@@ -126,11 +129,39 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
     );
   }
 
-  void _showSaveDialog() {
+  void _showSaveDialog() async {
     final viewModel = context.read<LadderGameViewModel>();
+    final lists = await viewModel.getSavedLists();
+    if (lists.length >= 5) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: const BorderSide(color: Color(0xFFBE2D06), width: 2)),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFBE2D06)),
+              const SizedBox(width: 8),
+              Text('저장 용량 초과', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: const Color(0xFFBE2D06))),
+            ],
+          ),
+          content: Text('명단은 최대 5개까지만 저장할 수 있습니다.\n기존 명단을 삭제한 후 다시 시도해 주세요.', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: NeonColors.textMain)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('확인', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     for (int i = 0; i < _nameControllers.length; i++) {
       viewModel.updateParticipantName(i, _nameControllers[i].text);
     }
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) {
@@ -228,7 +259,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
         return Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
-            decoration: NeonTheme.getCardDecoration(radius: 28),
+            decoration: NeonTheme.getCardDecoration(radius: 28, bg: const Color(0xFFF5F4EB)),
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -250,51 +281,88 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                         fontSize: 20,
                       ),
                     ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: NeonColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${lists.length}/5',
+                        style: GoogleFonts.plusJakartaSans(color: NeonColors.primary, fontWeight: FontWeight.w900, fontSize: 12),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.maxFinite,
                   height: 350,
                   child: lists.isEmpty
                       ? Center(
-                          child: Text('저장된 명단이 없습니다.', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.inventory_2_outlined, size: 48, color: NeonColors.textSub.withValues(alpha: 0.3)),
+                              const SizedBox(height: 16),
+                              Text('저장된 명단이 없습니다.', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
                         )
                       : ListView.separated(
                           itemCount: lists.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (_, i) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: NeonColors.stroke, width: 2),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: NeonColors.pointGreen.withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(Icons.inventory_2_outlined, color: NeonColors.primary, size: 20),
+                            return InkWell(
+                              onTap: () async {
+                                final nav = Navigator.of(ctx);
+                                await viewModel.loadParticipantList(lists[i]);
+                                nav.pop();
+                                if (mounted) setState(() => _rebuildControllers(viewModel));
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: NeonColors.stroke, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                                  ],
                                 ),
-                                title: Text(lists[i], style: GoogleFonts.plusJakartaSans(color: NeonColors.textMain, fontSize: 16, fontWeight: FontWeight.w800)),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Color(0xFFBE2D06), size: 24),
-                                  onPressed: () async {
-                                    final nav = Navigator.of(ctx);
-                                    await viewModel.deleteParticipantList(lists[i]);
-                                    nav.pop();
-                                  },
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: NeonColors.pointGreen.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(Icons.person_pin_outlined, color: NeonColors.pointGreen, size: 24),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(lists[i], style: GoogleFonts.plusJakartaSans(color: NeonColors.textMain, fontSize: 16, fontWeight: FontWeight.w900)),
+                                          Text('명단 등록됨', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontSize: 12, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, color: Color(0xFFBE2D06), size: 24),
+                                      onPressed: () async {
+                                        final nav = Navigator.of(ctx);
+                                        await viewModel.deleteParticipantList(lists[i]);
+                                        nav.pop();
+                                        _showLoadDialog(); // Re-open
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                onTap: () async {
-                                  final nav = Navigator.of(ctx);
-                                  await viewModel.loadParticipantList(lists[i]);
-                                  nav.pop();
-                                  if (mounted) setState(() => _rebuildControllers(viewModel));
-                                },
                               ),
                             );
                           },
@@ -404,7 +472,10 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 shrinkWrap: true,
                 itemCount: viewModel.playerCount,
                 itemBuilder: (_, i) {
-                  if (i >= _nameControllers.length) return const SizedBox();
+                  // 인덱스 초과 에러 방지를 위한 2중 안전 장치
+                  if (i >= _nameControllers.length || i >= viewModel.currentParticipants.length) {
+                    return const SizedBox();
+                  }
                   final p = viewModel.currentParticipants[i];
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
