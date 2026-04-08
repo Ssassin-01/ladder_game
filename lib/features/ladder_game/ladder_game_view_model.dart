@@ -50,7 +50,8 @@ class LadderGameViewModel extends ChangeNotifier {
   LadderGameMode get currentMode => _currentMode;
 
   // 모드별 설정을 저장하기 위한 맵
-  final Map<LadderGameMode, int> _modeCounts = {};
+  final Map<LadderGameMode, int> _modeCounts = {}; // 벌칙자 수/팀 수 등
+  final Map<LadderGameMode, int> _modePlayerCounts = {}; // 전체 참가자 수
   final Map<LadderGameMode, List<String>> _modeContents = {};
 
   int _penaltyCount = 1;
@@ -71,14 +72,14 @@ class LadderGameViewModel extends ChangeNotifier {
   bool _hasTeamLeader = false;
   bool get hasTeamLeader => _hasTeamLeader;
 
-  // 팀 컬러 팔레트 (최대 6팀)
+  // 팀 컬러 팔레트 (Kawaii Forest 테마에 어울리는 파스텔 톤)
   static const List<Color> teamColors = [
-    Color(0xFFFF007F), // 핫핑크
-    Color(0xFF00FFFF), // 시안
-    Color(0xFFFFFF00), // 옐로우
-    Color(0xFF7FFF00), // 라임
-    Color(0xFFFF8C00), // 오렌지
-    Color(0xFFBF00FF), // 퍼플
+    Color(0xFFFED3C7), // 피치 핑크
+    Color(0xFFD1E4FF), // 베이비 블루
+    Color(0xFFDBEC6D), // 숲의 연두
+    Color(0xFFFFD9B8), // 살구 오렌지
+    Color(0xFFC7EBC7), // 민트 그린
+    Color(0xFFE9E9DE), // 소프트 크림
   ];
 
   final List<Participant> _allAvailableParticipants = [
@@ -148,6 +149,7 @@ class LadderGameViewModel extends ChangeNotifier {
     // 대기 중이던 현재 데이터를 이전 모드용 맵에 백업 (단, 비어있지 않을 때만)
     if (_penaltyContents.isNotEmpty) {
       _modeCounts[_currentMode] = _penaltyCount;
+      _modePlayerCounts[_currentMode] = _playerCount;
       _modeContents[_currentMode] = List.from(_penaltyContents);
     }
 
@@ -156,20 +158,21 @@ class LadderGameViewModel extends ChangeNotifier {
     // 직접 입력(Manual) 모드일 경우 무조건 참가자 수와 항목 수 동기화
     if (mode == LadderGameMode.manual) {
       _penaltyCount = _playerCount;
-      _penaltyContents = List.generate(_playerCount, (i) => ''); // 처음엔 비워둘 수 있음 (힌트 보이기 위해)
+      _penaltyContents = List.generate(_playerCount, (i) => ''); 
     } else {
-      // 새로운 모드의 설정을 불러오거나 새로운 기본값 할당
       if (_modeCounts.containsKey(mode) && _modeContents[mode] != null && _modeContents[mode]!.isNotEmpty) {
         _penaltyCount = _modeCounts[mode]!;
+        _playerCount = _modePlayerCounts[mode] ?? _playerCount;
         _penaltyContents = List.from(_modeContents[mode]!);
       } else {
         _initNewModeDefaults(mode);
       }
     }
 
-    // 최종 정합성 체크: 순서 모드를 제외하고 항상 최소 1개는 있어야 함
     _ensureMinimumItemCount();
 
+    // 동기적으로 데이터 정합성 즉시 확보
+    _initData(keepParticipants: true);
     _generateResults();
     notifyListeners();
   }
@@ -200,6 +203,11 @@ class LadderGameViewModel extends ChangeNotifier {
     } else if (mode == LadderGameMode.order) {
       _penaltyCount = 0;
       _penaltyContents = [];
+    }
+
+    // 모드 전환 시 기본 참가자 수 설정 (저장된 게 없을 때만)
+    if (!_modePlayerCounts.containsKey(mode)) {
+      _playerCount = 5; // 기본값 5명으로 통일
     }
   }
 
@@ -336,6 +344,7 @@ class LadderGameViewModel extends ChangeNotifier {
 
     // 모든 캐시 및 현재 데이터 삭제
     _modeCounts.clear();
+    _modePlayerCounts.clear();
     _modeContents.clear();
     _penaltyContents.clear();
 
@@ -351,33 +360,37 @@ class LadderGameViewModel extends ChangeNotifier {
   }
 
   void _initData({bool keepParticipants = false}) {
-    if (!keepParticipants) {
+    // 1. 참가자 리스트 동기화
+    if (!keepParticipants || _currentParticipants.length != _playerCount) {
        List<Participant> newParticipants = [];
        for(int i=0; i<_playerCount; i++) {
            if (i < _currentParticipants.length) {
                newParticipants.add(_currentParticipants[i]);
            } else {
+               final template = _allAvailableParticipants[i % _allAvailableParticipants.length];
                newParticipants.add(Participant(
-                   animalType: _allAvailableParticipants[i % _allAvailableParticipants.length].animalType,
-                   emoji: _allAvailableParticipants[i % _allAvailableParticipants.length].emoji,
-                   color: _allAvailableParticipants[i % _allAvailableParticipants.length].color,
+                   animalType: template.animalType,
+                   emoji: template.emoji,
+                   color: template.color,
                ));
            }
        }
        _currentParticipants = newParticipants;
     }
 
+    // 2. 직접 입력 모드 시 내용 리스트 강제 동기화
     if (_currentMode == LadderGameMode.manual) {
       _penaltyCount = _playerCount;
       if (_penaltyContents.length < _playerCount) {
-        // 기존 데이터를 보존하면서 늘리기
         _penaltyContents.addAll(List.generate(_playerCount - _penaltyContents.length, (_) => ''));
       } else if (_penaltyContents.length > _playerCount) {
-        // 기존 데이터를 줄이기
         _penaltyContents = _penaltyContents.sublist(0, _playerCount);
       }
     }
+    
+    // 3. 결과 텍스트 재생성
     _generateResults();
+    // 4. 사다리 생성
     _generateLadder();
   }
 
@@ -488,15 +501,24 @@ class LadderGameViewModel extends ChangeNotifier {
         return;
       case LadderGameMode.manual:
         // 직접 입력 모드: 입력된 내용을 그대로 사용 (길이가 부족하면 빈 문자열 채움)
-        List<String> results = List.from(_penaltyContents);
-        while (results.length < _playerCount) {
-          results.add('');
+        List<String> manualResults = List.from(_penaltyContents);
+        // 참가자 수에 맞춰 결과 명단 보정
+        if (manualResults.length < _playerCount) {
+          manualResults.addAll(List.generate(_playerCount - manualResults.length, (_) => ''));
+        } else if (manualResults.length > _playerCount) {
+          manualResults = manualResults.sublist(0, _playerCount);
         }
-        if (results.length > _playerCount) {
-          results = results.sublist(0, _playerCount);
-        }
-        _bottomResults = results;
+        _bottomResults = manualResults;
         break;
+    }
+
+    // 모든 모드에서 최종 결과 리스트가 playerCount와 일치하는지 다시 한 번 강제 보정
+    if (_bottomResults.length != _playerCount) {
+      if (_bottomResults.length < _playerCount) {
+        _bottomResults.addAll(List.generate(_playerCount - _bottomResults.length, (_) => ''));
+      } else {
+        _bottomResults = _bottomResults.sublist(0, _playerCount);
+      }
     }
 
     if (_currentMode != LadderGameMode.order) {

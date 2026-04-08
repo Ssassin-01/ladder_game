@@ -4,42 +4,51 @@
 
 - **Name:** `ladder_game` (앱 표시 이름: 사다리 게임 마스터)
 - **Type:** Flutter Application
-- **Purpose:** 모임이나 술자리에서 벌칙/내기/순서를 빠르고 공정하게 정할 수 있는 '프리미엄 사다리 타기' 전용 앱.
-- **Core Modes (5대 사다리 모드):** 1. 벌칙 모드 (누가 벌칙을 받을 것인가!) 2. 당첨 모드 (누가 선물을 받을 것인가!) 3. 쏘기 모드 (오늘 결제는 누가 쏘나!) 4. 순서 모드 (발표나 게임 순서 정하기) 5. 직접 입력 (유저가 결과를 자유롭게 커스텀)
+- **Purpose:** 모임이나 술자리에서 벌칙/내기/순서를 빠르고 공정하게 정할 수 있는 **'프리미엄 힐링 & 위트'** 사다리 타기 앱.
+- **Core Modes:** 벌칙, 당첨, 쏘기, 순서, 팀 나누기, 직접 입력 (현재 6가지 모드 완벽 지원)
 
-## 2. UI/UX Design System (프론트엔드 핵심 지침)
+## 2. UI/UX Design System (Current: Kawaii Forest)
 
-- **다크 모드 (Neon Retro)**: 완전한 블랙(`#000000`) 베이스에 핫 핑크(`#FF007F`), 사이버 시안(`#00FFFF`), 일렉트릭 옐로우(`#FFFF00`) 등의 네온 컬러 및 발광 효과(Glow) 적용.
-- **라이트 모드 (High-end White)**: 오프화이트/그레이(`#F8F9FA` 또는 `Colors.grey[50]`) 베이스. 버튼은 딥 네이비(`Color(0xFF1A237E)`)나 차콜에 은은한 섀도우 적용. 텍스트는 짙은 그레이(`shade800`)로 고급스러움 강조.
-- **애니메이션**: 밋밋한 화면 전환 금지. 승패 결과창이나 버튼 터치 시 화면 흔들림(Shake), 스케일 펌핑 등 타격감 있는 짧고 경쾌한 애니메이션 필수. 게임 시작 시 가림막(Curtain)이 걷히는 시각적 카타르시스 연출.
+- **Main Theme (Forest & Cream)**:
+  - **Base Background**: `Pale Cream (#FEFCF4)` - 따뜻하고 눈이 편안한 오프화이트 배경.
+  - **Key Accent**: `Olive Green (#5F6A00)` & `Light Lime (#DBEC6D)`.
+  - **Stroke & Outline**: `Dark Chocolate Brown (#5D4037)` - 모든 카드와 버튼에 **2.0 두께의 고정 테두리**를 적용하여 카툰풍의 선명한 느낌 강조.
+- **Aesthetics**:
+  - **3D Design**: `BoxShadow`를 활용한 입체감 있는 버튼(Neon3DButton) 및 레이어링.
+  - **Typography**: Google Fonts의 **`Plus Jakarta Sans`**를 사용하여 모던하면서도 귀여운 감성 유지.
+  - **Dynamic Elements**: 사다리가 내려갈 때의 가림막(Curtain) 효과, 결과 발표 시의 팝업 애니메이션.
 
 ## 3. Development Conventions
 
 - **Language:** Dart (Null Safety strict)
-- **State Management:** `Provider` 사용 권장 (모드 상태 및 데이터 관리용).
-- **Architecture:** MVVM (Model-View-ViewModel) 패턴 지향. UI 위젯과 비즈니스 로직 철저히 분리.
-- **Project Structure (Feature-first):**
-  - `lib/core/`: 공통 위젯, 테마, 유틸리티 함수.
-  - `lib/features/`: `home`(모드 선택), `ladder_settings`(설정), `ladder_game`(메인 캔버스), `ladder_result`(결과 화면) 단위로 분리.
-- **Code Style & Comments:**
-  - 복잡한 로직이나 애니메이션(특히 캔버스 경로 및 다중 궤도 동기화 부분)에는 **반드시 한국어로 상세한 주석**을 작성할 것.
+- **State Management:** `Provider`를 이용한 MVVM 구조.
+- **Structure:** `lib/core/` (공통 테마 및 위젯), `lib/features/` (기능별 스크린 및 뷰모델).
+- **Code Style:** 복잡한 캔버스 로직이나 애니메이션 구간에는 한국어로 상세 주석 작성 필수.
 
-## 4. Agent Skills & Execution
+## 4. Project Evolution TODOs
 
-- **File System**: 텍스트로 코드만 주지 말고, 직접 에이전트 스킬을 발동하여 `lib/` 내부에 폴더와 `.dart` 파일을 생성 및 수정할 것.
-- **Terminal**: `provider` 등의 외부 패키지가 필요하면 터미널 스킬을 사용해 직접 `flutter pub add`를 실행할 것.
-
-## 5. Project Evolution TODOs
-
-- [x] 1단계: 사다리 캔버스 렌더링, 하단 겹침 방지 및 대각선 궤도 동기화 로직 구현.
-- [x] 2단계: 멀티 애니메이션 동기화 및 논리적 결과 100% 일치 매핑 확보.
-- [x] 3단계: 가림막(Fog of War) 커튼 연출, 승자 독식 레이아웃, 다크 모드(네온) 고정.
-- [x] **4단계: 메인 홈 화면(Home Screen) 개발**: 6가지 사다리 모드(벌칙, 당첨, 쏘기, 순서, 직접 입력, 팀 나누기)를 선택할 수 있는 깔끔한 UI 진입점 생성.
-- [x] **5단계: (POLISH) 벌칙 모드 UI 디테일 및 예외 처리**:
-  - [x] **참가자 수 직접 입력**: `TextField`로 변경하여 유저가 숫자를 직접 타이핑할 수 있게 UX 개선. (유효성 검사: 2~20명 제한 안내 문구 추가).
-  - [x] **벌칙 리스트 직관성**: 벌칙 입력 폼 좌측에 인덱스 번호(1., 2. ...)를 표기.
-  - [x] **게임 하단 뱃지(Badge) UI**: 사다리 하단 결과 칸의 모양을 글자 길이에 따라 유연하게 대응하는 알약 형태로 변경. `FittedBox`를 적용하여 긴 텍스트 렌더링 오류(Overflow) 완벽 방지.
+- [x] 1단계: 사다리 캔버스 렌더링 및 하단 겹침 방지 로직 구현.
+- [x] 2단계: 멀티 애니메이션 동기화 및 논리적 결과 100% 일치 확인.
+- [x] 3단계: 가림막(Fog of War) 커튼 연출 및 테마 시스템(NeonColors) 정립.
+- [x] **4단계: 메인 홈 화면 개발**: 6가지 모드 선택을 위한 그리드 레이아웃 및 진입점 구현.
+- [x] **5단계: 결과 화면 폴리싱**:
+  - [x] 모드별 강조 배경색(그라데이션) 및 입체적인 카드 디자인 적용.
+  - [x] 팀 나누기 결과 시 팀장을 리스트 맨 앞으로 정렬하는 로직 개선.
 - [x] **6단계: 추가 기능 구현**:
-  - [x] **사운드 효과**: `audioplayers` 연동 (설정 클릭, 캐릭터 애니메이션, 결과 연출 등).
-  - [x] **결과 화면 공유**: `screenshot` 및 `share_plus` 플러그인 연동.
-  - [x] **명단 저장/불러오기**: `shared_preferences`를 사용한 Custom Participant preset.
+  - [x] **사운드 효과**: `audioplayers` 연동 (팝업, 사다리 이동, 결과 발표 사운드).
+  - [x] **결과 공유**: `screenshot` 및 `share_plus`를 이용한 이미지 공유 기능.
+  - [x] **명단 관리**: `shared_preferences`를 이용한 참가자 프리셋 저장.
+
+- [ ] **7단계: 프리미엄 인터랙션 강화 (Visual & Physical Juice)**:
+  - [ ] **네온 플리커(Neon Flicker)**: 주요 타이틀이나 버튼에 미세한 깜빡임 효과 추가.
+  - [ ] **햅틱 피드백(Haptics)**: 사다리 꺾임 및 결과 도출 시 진동 패턴 탑재.
+  - [ ] **스크린 쉐이크(Shake)**: 결과 발표 시의 강력한 시각적 타격감 구현.
+
+- [ ] **8단계: 게임 기록 보관소 (History & Data)**:
+  - [ ] **최근 결과 저장**: 이전 게임들의 결과를 로컬에 자동 기록.
+  - [ ] **역대 결과 화면**: 홈 화면에서 진입 가능한 히스토리 페이지 구축.
+
+- [ ] **9단계: 유틸리티 및 커스터마이징 확장**:
+  - [ ] **BGM 시스템**: 게임 진행 중 긴장감을 높이는 배경음악 추가.
+  - [ ] **벌칙 프리셋**: 자주 사용하는 벌칙 목록을 관리하고 즉시 로드하는 기능.
+  - [ ] **캐릭터 색상 선택**: 참가자별로 고유한 테마 색상을 직접 지정하는 기능.

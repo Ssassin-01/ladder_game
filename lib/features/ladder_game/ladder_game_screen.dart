@@ -34,12 +34,16 @@ class _LadderGameScreenState extends State<LadderGameScreen>
   bool _isAnimating = false;
   bool _isNavigationTriggered = false;
   final List<TextEditingController> _controllers = [];
+  final TextEditingController _sectionCountController = TextEditingController();
+  Timer? _stepTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LadderGameViewModel>().resetShroud();
+      final viewModel = context.read<LadderGameViewModel>();
+      viewModel.resetShroud();
+      _sectionCountController.text = '${viewModel.sectionCount}';
     });
 
     _shakeController = AnimationController(
@@ -66,14 +70,19 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         _controllers.removeRange(viewModel.playerCount, _controllers.length);
       } else {
         for (int i = _controllers.length; i < viewModel.playerCount; i++) {
-          _controllers.add(TextEditingController(text: viewModel.bottomResults[i]));
+          // Safety Check: Ensure the results exist before mapping to controllers
+          final initialValue = i < viewModel.bottomResults.length ? viewModel.bottomResults[i] : '';
+          _controllers.add(TextEditingController(text: initialValue));
         }
       }
     }
     if (!_isAnimating) {
       for (int i = 0; i < viewModel.playerCount; i++) {
-        if (_controllers[i].text != viewModel.bottomResults[i]) {
-          _controllers[i].text = viewModel.bottomResults[i];
+        // Safety: Ensure both lists have the required index
+        if (i < _controllers.length && i < viewModel.bottomResults.length) {
+          if (_controllers[i].text != viewModel.bottomResults[i]) {
+            _controllers[i].text = viewModel.bottomResults[i];
+          }
         }
       }
     }
@@ -88,7 +97,34 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     for (var controller in _controllers) {
       controller.dispose();
     }
+    _stopStepping();
     super.dispose();
+  }
+
+  void _startStepping(bool isIncrement, LadderGameViewModel viewModel) {
+    _stopStepping();
+    final action = () {
+      if (isIncrement) {
+        if (viewModel.sectionCount < 100) {
+          viewModel.setSectionCount(viewModel.sectionCount + 1);
+          _sectionCountController.text = '${viewModel.sectionCount}';
+          SoundManager().playTick();
+        }
+      } else {
+        if (viewModel.sectionCount > 1) {
+          viewModel.setSectionCount(viewModel.sectionCount - 1);
+          _sectionCountController.text = '${viewModel.sectionCount}';
+          SoundManager().playTick();
+        }
+      }
+    };
+    action();
+    _stepTimer = Timer.periodic(const Duration(milliseconds: 150), (_) => action());
+  }
+
+  void _stopStepping() {
+    _stepTimer?.cancel();
+    _stepTimer = null;
   }
 
   void _navigateToResults(LadderGameViewModel viewModel) {
@@ -96,11 +132,18 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     _isNavigationTriggered = true;
 
     final results = _selectedStartIndices.map((startIdx) {
+      // Bounds check for safety before navigation
+      if (startIdx >= viewModel.currentParticipants.length) return null;
+      
       final p = viewModel.currentParticipants[startIdx];
       final resIdx = _endIndexSnapshot[startIdx] ?? viewModel.getResultIndex(startIdx);
-      final resText = _resultTextSnapshot[startIdx] ?? viewModel.bottomResults[resIdx];
+      
+      // Safety: Ensure the calculated end index is within bottomResults bounds
+      final safeResIdx = (resIdx < viewModel.bottomResults.length) ? resIdx : 0;
+      final resText = _resultTextSnapshot[startIdx] ?? (safeResIdx < viewModel.bottomResults.length ? viewModel.bottomResults[safeResIdx] : '');
+      
       return ResultItem(emoji: p.emoji, name: p.displayName, color: p.color, text: resText);
-    }).toList();
+    }).whereType<ResultItem>().toList();
 
     Navigator.of(context).push(MaterialPageRoute(builder: (context) => LadderResultScreen(results: results))).then((_) {
       _resetGameState();
@@ -169,35 +212,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
       futures.add(_runAnimation(i, viewModel));
     }
     await Future.wait(futures);
-  }
-
-
-  // --- 가로선 갯수 직접 입력 다이얼로그 추가 ---
-  void _showSectionCountDialog(BuildContext context, LadderGameViewModel viewModel) {
-    final controller = TextEditingController(text: viewModel.sectionCount.toString());
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('가로선 갯수 설정'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '1 ~ 100 사이 숫자 입력'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          TextButton(
-            onPressed: () {
-              int val = int.tryParse(controller.text) ?? viewModel.sectionCount;
-              viewModel.setSectionCount(val.clamp(1, 100));
-              Navigator.pop(context);
-            },
-            child: const Text('확인'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -296,6 +310,9 @@ class _LadderGameScreenState extends State<LadderGameScreen>
 
                         // 상단 참가자 캐릭터
                         ...List.generate(viewModel.playerCount, (i) {
+                          // Bounds check for participants
+                          if (i >= viewModel.currentParticipants.length) return const SizedBox.shrink();
+                          
                           final p = viewModel.currentParticipants[i];
                           final bool isSelected = _selectedStartIndices.contains(i);
                           return Positioned(
@@ -341,6 +358,10 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                               clipBehavior: Clip.none,
                               children: List.generate(viewModel.playerCount, (i) {
                                 final isTarget = _finishedEndIndices.contains(i);
+                                
+                                // Bounds check for result text
+                                if (i >= viewModel.bottomResults.length) return const SizedBox.shrink();
+                                
                                 final resultText = viewModel.bottomResults[i];
                                 final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
                                 final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -463,39 +484,71 @@ class _LadderGameScreenState extends State<LadderGameScreen>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Neon3DButton(
-                size: 40,
-                onPressed: () {
-                  SoundManager().playTick();
-                  if (viewModel.sectionCount > 1) viewModel.setSectionCount(viewModel.sectionCount - 1);
-                },
-                child: const Icon(Icons.remove, color: Colors.white, size: 20),
+              GestureDetector(
+                onLongPress: () => _startStepping(false, viewModel),
+                onLongPressUp: _stopStepping,
+                child: Neon3DButton(
+                  size: 40,
+                  onPressed: () {
+                    if (viewModel.sectionCount > 1) {
+                      viewModel.setSectionCount(viewModel.sectionCount - 1);
+                      _sectionCountController.text = '${viewModel.sectionCount}';
+                      SoundManager().playTick();
+                    }
+                  },
+                  child: const Icon(Icons.remove, color: Colors.white, size: 20),
+                ),
               ),
               
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: InkWell(
-                  onTap: () => _showSectionCountDialog(context, viewModel),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text('${viewModel.sectionCount}줄',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: NeonColors.primary, 
-                        fontWeight: FontWeight.w900, 
-                        fontSize: isLandscape ? 24 : 32,
-                      )),
+                child: Container(
+                  width: isLandscape ? 80 : 100,
+                  alignment: Alignment.center,
+                  child: TextField(
+                    controller: _sectionCountController,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: NeonColors.primary, 
+                      fontWeight: FontWeight.w900, 
+                      fontSize: isLandscape ? 28 : 40,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: (val) {
+                      final n = int.tryParse(val);
+                      if (n != null && n >= 1 && n <= 100) {
+                        viewModel.setSectionCount(n);
+                      }
+                    },
+                    onSubmitted: (val) {
+                      final n = int.tryParse(val);
+                      if (n == null || n < 1) viewModel.setSectionCount(1);
+                      if (n != null && n > 100) viewModel.setSectionCount(100);
+                      _sectionCountController.text = '${viewModel.sectionCount}';
+                    },
                   ),
                 ),
               ),
               
-              Neon3DButton(
-                size: 40,
-                onPressed: () {
-                  SoundManager().playTick();
-                  if (viewModel.sectionCount < 100) viewModel.setSectionCount(viewModel.sectionCount + 1);
-                },
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
+              GestureDetector(
+                onLongPress: () => _startStepping(true, viewModel),
+                onLongPressUp: _stopStepping,
+                child: Neon3DButton(
+                  size: 40,
+                  onPressed: () {
+                    if (viewModel.sectionCount < 100) {
+                      viewModel.setSectionCount(viewModel.sectionCount + 1);
+                      _sectionCountController.text = '${viewModel.sectionCount}';
+                      SoundManager().playTick();
+                    }
+                  },
+                  child: const Icon(Icons.add, color: Colors.white, size: 20),
+                ),
               ),
             ],
           ),

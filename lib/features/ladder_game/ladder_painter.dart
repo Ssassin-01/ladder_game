@@ -34,27 +34,8 @@ class LadderPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
-    // 마디(Joint) 페인트
-    final jointPaint = Paint()
-      ..color = const Color(0xFF4A5D23).withOpacity(0.6)
-      ..strokeWidth = 5.5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    // 대나무 그리기 헬퍼 함수
     void drawBamboo(Offset p1, Offset p2) {
       canvas.drawLine(p1, p2, bambooPaint);
-      
-      // 마디 그리기 (일정 간격으로)
-      final distance = (p2 - p1).distance;
-      final direction = (p2 - p1) / distance;
-      
-      int jointCount = (distance / 45).floor();
-      for (int k = 0; k <= jointCount; k++) {
-        final jointPos = p1 + direction * (k * (distance / jointCount.clamp(1, 100)));
-        final jointNormal = Offset(-direction.dy, direction.dx) * 3.5;
-        canvas.drawLine(jointPos - jointNormal, jointPos + jointNormal, jointPaint);
-      }
     }
 
     // 수직선 그리기 (대나무)
@@ -103,10 +84,10 @@ class LadderPainter extends CustomPainter {
         
         // 경로 외곽 선 (Glow 효과 - 대나무 위에 자연스럽게 얹힘)
         final shadowPaint = Paint()
-          ..color = color.withOpacity(0.3)
+          ..color = color.withOpacity(0.12)
           ..strokeWidth = 10.0
           ..style = PaintingStyle.stroke
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0)
           ..strokeCap = StrokeCap.round;
 
         // 주 경로 선

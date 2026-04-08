@@ -42,37 +42,24 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
     super.dispose();
   }
 
-  void _onPressedDown(PointerDownEvent details) {
-    if (widget.onPressed != null) {
-      setState(() => _isPressed = true);
-      _controller.forward();
-    }
-  }
-
-  void _onPressedUp(PointerUpEvent details) {
-    if (widget.onPressed != null) {
-      setState(() => _isPressed = false);
-      _controller.reverse();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     const double shadowDepth = 4.0;
+    final bool isEnabled = widget.onPressed != null;
     
     return GestureDetector(
       onPanDown: (_) {
-         if (widget.onPressed != null) { setState(() => _isPressed = true); _controller.forward(); }
+         if (isEnabled) { setState(() => _isPressed = true); _controller.forward(); }
       },
       onPanCancel: () {
-         if (widget.onPressed != null) { setState(() => _isPressed = false); _controller.reverse(); }
+         if (isEnabled) { setState(() => _isPressed = false); _controller.reverse(); }
       },
       onTap: widget.onPressed,
       onTapDown: (_) {
-         if (widget.onPressed != null) { setState(() => _isPressed = true); _controller.forward(); }
+         if (isEnabled) { setState(() => _isPressed = true); _controller.forward(); }
       },
       onTapUp: (_) {
-         if (widget.onPressed != null) { setState(() => _isPressed = false); _controller.reverse(); }
+         if (isEnabled) { setState(() => _isPressed = false); _controller.reverse(); }
       },
       child: AnimatedBuilder(
         animation: _controller,
@@ -86,12 +73,12 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
             padding: EdgeInsets.only(top: currentTranslateY),
             child: Container(
               decoration: BoxDecoration(
-                color: widget.onPressed != null ? widget.baseColor : Colors.grey[400],
+                color: isEnabled ? widget.baseColor : const Color(0xFFDED9CD),
                 shape: widget.isCircle ? BoxShape.circle : BoxShape.rectangle,
                 borderRadius: widget.isCircle ? null : BorderRadius.circular(24),
-                border: Border.all(color: NeonColors.stroke, width: 2),
+                border: Border.all(color: NeonColors.stroke.withValues(alpha: isEnabled ? 1.0 : 0.4), width: 2),
                 boxShadow: [
-                  if (!_isPressed)
+                  if (!_isPressed && isEnabled)
                     BoxShadow(
                       color: NeonColors.stroke,
                       offset: Offset(0, currentShadowDepth),
@@ -99,7 +86,10 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
                     ),
                 ],
               ),
-              child: Center(child: widget.child),
+              child: Opacity(
+                opacity: isEnabled ? 1.0 : 0.5,
+                child: Center(child: widget.child)
+              ),
             ),
           );
         },
@@ -128,23 +118,30 @@ class _Neon3DBigButtonState extends State<Neon3DBigButton> {
   @override
   Widget build(BuildContext context) {
     const double shadowDepth = 8.0;
+    final bool isEnabled = widget.onPressed != null;
     
     return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
+      onTapDown: (_) {
+        if (isEnabled) setState(() => _isPressed = true);
+      },
+      onTapUp: (_) {
+        if (isEnabled) setState(() => _isPressed = false);
+      },
+      onTapCancel: () {
+        if (isEnabled) setState(() => _isPressed = false);
+      },
       onTap: widget.onPressed,
       child: Transform.translate(
-        offset: Offset(0, _isPressed ? shadowDepth : 0),
+        offset: Offset(0, _isPressed && isEnabled ? shadowDepth : 0),
         child: Container(
           width: double.infinity,
           height: 64,
           decoration: BoxDecoration(
-            color: NeonColors.primary,
+            color: isEnabled ? NeonColors.primary : const Color(0xFFDED9CD),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: NeonColors.stroke, width: 2),
+            border: Border.all(color: NeonColors.stroke.withValues(alpha: isEnabled ? 1.0 : 0.4), width: 2),
             boxShadow: [
-              if (!_isPressed)
+              if (!_isPressed && isEnabled)
                 const BoxShadow(
                   color: NeonColors.stroke,
                   offset: Offset(0, shadowDepth),
@@ -155,8 +152,8 @@ class _Neon3DBigButtonState extends State<Neon3DBigButton> {
           alignment: Alignment.center,
           child: Text(
             widget.label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isEnabled ? Colors.white : NeonColors.textSub.withValues(alpha: 0.6),
               fontWeight: FontWeight.w900,
               fontSize: 20,
               letterSpacing: 1.2,

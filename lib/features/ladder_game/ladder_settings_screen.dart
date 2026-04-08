@@ -91,6 +91,11 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     final viewModel = context.watch<LadderGameViewModel>();
     final String title = _getModeTitle(widget.mode);
 
+    // Ensure player count controller is in sync with VM (e.g. after mode change)
+    if (_playerCountController.text != viewModel.playerCount.toString()) {
+      _playerCountController.text = viewModel.playerCount.toString();
+    }
+
     return Scaffold(
       backgroundColor: NeonColors.background,
       appBar: _buildAppBar(context, title, viewModel),
@@ -99,7 +104,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
             children: [
-              // Use a container for the overall 3-card grouping as seen in Stitch redesign
               Column(
                 children: [
                   // 1. Participant Count Card
@@ -115,7 +119,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   // 3. Mode Specific Content (The 3rd card in the sequence)
                   _buildModeSpecificCard(viewModel),
                   
-                  // if team mode, speed comes after configuration
                   if (widget.mode == LadderGameMode.team) ...[
                     const SizedBox(height: 20),
                     _buildSpeedCard(viewModel),
@@ -127,6 +130,8 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                     builder: (context) {
                       final bool isManualMode = widget.mode == LadderGameMode.manual;
                       bool canStart = true;
+                      
+                      // Validation for Manual Mode
                       if (isManualMode) {
                         for (var controller in _itemControllers) {
                           if (controller.text.trim().isEmpty) {
@@ -261,7 +266,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                     FilteringTextInputFormatter.digitsOnly,
                   ],
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 52, // Slightly smaller font
+                    fontSize: 52, 
                     fontWeight: FontWeight.w900,
                     color: NeonColors.primary,
                   ),
@@ -290,7 +295,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 onLongPress: () => _startStepping(true, viewModel),
                 onLongPressUp: _stopStepping,
                 child: Neon3DButton(
-                  size: 52, // Slightly smaller to prevent overflow
+                  size: 52,
                   onPressed: () {
                     if (viewModel.playerCount < 20) {
                       viewModel.setPlayerCount(viewModel.playerCount + 1);
@@ -376,7 +381,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            // Team Count Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -416,7 +420,6 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Divider(height: 1, color: Color(0xFFE5E0D5)),
             ),
-            // Team Leader Toggle Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -512,7 +515,10 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                                 hintStyle: GoogleFonts.plusJakartaSans(color: NeonColors.textSub.withValues(alpha: 0.5)),
                               ),
                               style: GoogleFonts.plusJakartaSans(fontSize: 15, color: NeonColors.textMain, fontWeight: FontWeight.w600),
-                              onChanged: (val) => viewModel.updatePenaltyContent(index, val),
+                              onChanged: (val) {
+                                viewModel.updatePenaltyContent(index, val);
+                                setState(() {}); // To update start button state
+                              },
                             ),
                           ),
                         ],
