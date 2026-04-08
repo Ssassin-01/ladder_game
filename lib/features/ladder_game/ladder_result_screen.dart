@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/neon_theme.dart';
 import '../../core/widgets/neon_3d_button.dart';
 import '../../core/sound_manager.dart';
+import '../settings/settings_view_model.dart';
 import 'ladder_game_mode.dart';
 import 'ladder_game_view_model.dart';
 
@@ -125,10 +126,11 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     }
     super.dispose();
   }
-
-  @override
   Widget build(BuildContext context) {
+    final settingsViewModel = context.watch<SettingsViewModel>();
+    final colors = settingsViewModel.currentTheme;
     final viewModel = context.watch<LadderGameViewModel>();
+
     final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
     final bool isManualMode = viewModel.currentMode == LadderGameMode.manual;
     final orientation = MediaQuery.of(context).orientation;
@@ -145,27 +147,27 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     return Screenshot(
       controller: _screenshotController,
       child: Scaffold(
-        backgroundColor: NeonColors.background,
+        backgroundColor: colors.background,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
           toolbarHeight: isLandscape ? 48 : 64,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: 22),
+            icon: Icon(Icons.arrow_back_ios_new, color: colors.primary, size: 22),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
             titleText,
             style: GoogleFonts.plusJakartaSans(
-              color: NeonColors.primary,
+              color: colors.primary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.share, color: NeonColors.primary),
+              icon: Icon(Icons.share, color: colors.primary),
               onPressed: _shareScreenshot,
             ),
             const SizedBox(width: 8),
@@ -183,14 +185,14 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                       top: false,
                       bottom: false,
                       child: isTeamMode
-                        ? _buildTeamModeLayout(viewModel)
+                        ? _buildTeamModeLayout(viewModel, colors)
                         : (isOrderMode 
-                          ? _buildOrderModeLayout()
+                          ? _buildOrderModeLayout(colors)
                           : (isManualMode
-                             ? _buildManualModeLayout()
+                             ? _buildManualModeLayout(colors)
                              : (isLandscape 
-                                ? _buildLandscapeLayout() 
-                                : _buildPortraitLayout()))),
+                                ? _buildLandscapeLayout(colors) 
+                                : _buildPortraitLayout(colors)))),
                     ),
                     const SizedBox(height: 100), 
                   ],
@@ -199,17 +201,17 @@ class _LadderResultScreenState extends State<LadderResultScreen>
             ),
           ],
         ),
-        bottomNavigationBar: _buildBottomActions(context),
+        bottomNavigationBar: _buildBottomActions(context, colors),
       ),
     );
   }
 
-  Widget _buildBottomActions(BuildContext context) {
+  Widget _buildBottomActions(BuildContext context, LadderThemeData colors) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       decoration: BoxDecoration(
-        color: NeonColors.background.withOpacity(0.8),
-        border: const Border(top: BorderSide(color: Color(0xFFE5E0D5), width: 1.5)),
+        color: colors.background.withOpacity(0.85),
+        border: Border(top: BorderSide(color: colors.stroke.withOpacity(0.1), width: 1.5)),
       ),
       child: Neon3DBigButton(
         label: '홈으로 돌아가기',
@@ -218,7 +220,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildManualModeLayout() {
+  Widget _buildManualModeLayout(LadderThemeData colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -235,10 +237,10 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: NeonTheme.getCardDecoration(
-                  bg: animalColor.withOpacity(0.1),
+                  bg: colors.cardBg,
                   radius: 22,
+                  strokeColor: colors.stroke.withOpacity(0.15),
                 ).copyWith(
-                  border: Border.all(color: darkerColor.withOpacity(0.3), width: 1.5),
                   boxShadow: [
                     BoxShadow(
                       color: animalColor.withOpacity(0.1),
@@ -270,7 +272,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                           Text(
                             result.name,
                             style: GoogleFonts.plusJakartaSans(
-                              color: darkerColor,
+                              color: colors.textSub,
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                             ),
@@ -279,7 +281,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                           Text(
                             result.text.isEmpty ? '(입력 내용 없음)' : result.text,
                             style: GoogleFonts.plusJakartaSans(
-                              color: NeonColors.textMain,
+                              color: colors.textMain,
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
                             ),
@@ -290,11 +292,11 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                        color: colors.primary.withOpacity(0.1),
                         shape: BoxShape.circle,
-                        border: Border.all(color: animalColor.withOpacity(0.4), width: 1),
+                        border: Border.all(color: colors.primary.withOpacity(0.2), width: 1),
                       ),
-                      child: Icon(Icons.check_circle_outline, color: darkerColor, size: 20),
+                      child: Icon(Icons.check_circle_outline, color: colors.primary, size: 20),
                     ),
                   ],
                 ),
@@ -306,7 +308,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildTeamModeLayout(LadderGameViewModel viewModel) {
+  Widget _buildTeamModeLayout(LadderGameViewModel viewModel, LadderThemeData colors) {
     final Map<String, List<ResultItem>> teamGroups = {};
     for (final r in widget.results) {
       String key = "기타";
@@ -332,7 +334,6 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         final teamKey = entry.value;
         final members = teamGroups[teamKey]!;
         
-        // 팀장이 젤 앞으로 오도록 정렬
         members.sort((a, b) {
           final aLeader = a.text.contains('팀장');
           final bLeader = b.text.contains('팀장');
@@ -343,8 +344,6 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         
         final teamNum = int.tryParse(teamKey.replaceAll(RegExp(r'[^0-9]'), '')) ?? (teamIdx + 1);
         final teamColor = LadderGameViewModel.teamColors[(teamNum - 1) % LadderGameViewModel.teamColors.length];
-        
-        // Use a much darker version for the text color as requested
         final darkerTeamColor = Color.lerp(teamColor, Colors.black, 0.65)!;
 
         return Padding(
@@ -353,14 +352,17 @@ class _LadderResultScreenState extends State<LadderResultScreen>
             scale: teamIdx < _animations.length ? _animations[teamIdx] : const AlwaysStoppedAnimation(1.0),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFFBF9F1)),
+              decoration: NeonTheme.getCardDecoration(
+                bg: colors.cardBg,
+                strokeColor: colors.stroke.withOpacity(0.1)
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                     decoration: BoxDecoration(
-                      color: teamColor.withOpacity(0.2), // Slightly more opacity for header background
+                      color: teamColor.withOpacity(0.15),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(30),
                         topRight: Radius.circular(30),
@@ -370,14 +372,14 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                       children: [
                         Container(
                           width: 32, height: 32,
-                          decoration: BoxDecoration(color: darkerTeamColor.withOpacity(0.1), shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: teamColor.withOpacity(0.2), shape: BoxShape.circle),
                           child: Center(child: Text('${teamIdx + 1}', style: TextStyle(color: darkerTeamColor, fontWeight: FontWeight.bold))),
                         ),
                         const SizedBox(width: 12),
                         Text(
                           teamKey,
                           style: GoogleFonts.plusJakartaSans(
-                            color: darkerTeamColor, // Applied much darker color here
+                            color: colors.textMain,
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                           ),
@@ -385,8 +387,8 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.7), borderRadius: BorderRadius.circular(20)),
-                          child: Text('${members.length}명', style: GoogleFonts.plusJakartaSans(color: darkerTeamColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                          decoration: BoxDecoration(color: colors.background.withOpacity(0.7), borderRadius: BorderRadius.circular(20)),
+                          child: Text('${members.length}명', style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontSize: 13, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -401,11 +403,11 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: isLeader ? teamColor.withOpacity(0.08) : Colors.white,
+                            color: isLeader ? teamColor.withOpacity(0.08) : colors.background.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isLeader ? teamColor : NeonColors.stroke.withOpacity(0.15),
-                              width: isLeader ? 2 : 1,
+                              color: isLeader ? teamColor : colors.stroke.withOpacity(0.1),
+                              width: isLeader ? 2 : 1.5,
                             ),
                           ),
                           child: Row(
@@ -419,7 +421,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                                   Text(
                                     member.name,
                                     style: GoogleFonts.plusJakartaSans(
-                                      color: NeonColors.textMain,
+                                      color: colors.textMain,
                                       fontWeight: FontWeight.w800,
                                       fontSize: 14,
                                     ),
@@ -428,7 +430,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                                     Text(
                                       '👑 팀장',
                                       style: GoogleFonts.plusJakartaSans(
-                                        color: darkerTeamColor,
+                                        color: isLeader ? teamColor : colors.textSub,
                                         fontSize: 10,
                                         fontWeight: FontWeight.w900,
                                       ),
@@ -450,7 +452,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildOrderModeLayout() {
+  Widget _buildOrderModeLayout(LadderThemeData colors) {
     return Column(
       children: _sortedResults.asMap().entries.map((entry) {
         final index = entry.key;
@@ -466,14 +468,15 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               height: 90,
               margin: const EdgeInsets.symmetric(horizontal: 24),
               decoration: NeonTheme.getCardDecoration(
-                bg: isTop ? NeonColors.modeOrder.withOpacity(0.15) : const Color(0xFFFBF9F1),
+                bg: colors.cardBg,
+                strokeColor: isTop ? colors.modeOrder : colors.stroke.withOpacity(0.1),
               ).copyWith(
                 border: Border.all(
-                  color: isTop ? Color.lerp(NeonColors.modeOrder, Colors.black, 0.3)! : NeonColors.stroke,
+                  color: isTop ? colors.modeOrder : colors.stroke.withOpacity(0.2),
                   width: isTop ? 2.5 : 2.0,
                 ),
                 boxShadow: isTop ? [
-                  BoxShadow(color: NeonColors.modeOrder.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 6))
+                  BoxShadow(color: colors.modeOrder.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 6))
                 ] : null,
               ),
               child: Row(
@@ -481,18 +484,18 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                   Container(
                     width: 70,
                     decoration: BoxDecoration(
-                      color: isTop ? NeonColors.modeOrder : NeonColors.modeOrder.withOpacity(0.3),
+                      color: isTop ? colors.modeOrder : colors.modeOrder.withOpacity(0.2),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(30),
                         bottomLeft: Radius.circular(30),
                       ),
-                      border: Border(right: BorderSide(color: isTop ? Color.lerp(NeonColors.modeOrder, Colors.black, 0.3)! : NeonColors.stroke, width: 2)),
+                      border: Border(right: BorderSide(color: isTop ? colors.modeOrder : colors.stroke.withOpacity(0.1), width: 2)),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '$rankNum',
                       style: GoogleFonts.plusJakartaSans(
-                        color: isTop ? Colors.white : NeonColors.primary,
+                        color: isTop ? Colors.white : colors.textMain,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
                       ),
@@ -504,10 +507,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
-                      border: Border.all(color: NeonColors.stroke.withOpacity(0.15), width: 1.5),
-                      boxShadow: isTop ? [
-                        BoxShadow(color: NeonColors.modeOrder.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
-                      ] : null,
+                      border: Border.all(color: colors.stroke.withOpacity(0.1), width: 1.5),
                     ),
                     alignment: Alignment.center,
                     child: Text(result.emoji, style: const TextStyle(fontSize: 32)),
@@ -521,7 +521,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                         Text(
                           result.name,
                           style: GoogleFonts.plusJakartaSans(
-                            color: NeonColors.textSub,
+                            color: colors.textSub,
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
@@ -530,7 +530,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                         Text(
                           result.text,
                           style: GoogleFonts.plusJakartaSans(
-                            color: isTop ? Color.lerp(NeonColors.modeOrder, Colors.black, 0.5)! : NeonColors.primary,
+                            color: isTop ? colors.modeOrder : colors.primary,
                             fontSize: 19,
                             fontWeight: FontWeight.w900,
                           ),
@@ -539,9 +539,9 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     ),
                   ),
                   if (rankNum == 1)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 20),
-                      child: Icon(Icons.stars, color: Color(0xFFD4B483), size: 32),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 20),
+                      child: Icon(Icons.stars, color: colors.modeWin, size: 32),
                     ),
                 ],
               ),
@@ -552,7 +552,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildLandscapeLayout() {
+  Widget _buildLandscapeLayout(LadderThemeData colors) {
     final viewModel = context.read<LadderGameViewModel>();
     final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
     final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -570,15 +570,15 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         Expanded(
           flex: 5,
           child: Column(
-            children: mainResults.map((result) => _buildPenaltyCard(result, compact: true, 
+            children: mainResults.map((result) => _buildPenaltyCard(result, colors, compact: true, 
               isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
           ),
         ),
         Expanded(
           flex: 5,
           child: Container(
-            decoration: const BoxDecoration(
-              border: Border(left: BorderSide(color: Color(0xFFE5E0D5), width: 2)),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: colors.stroke.withOpacity(0.1), width: 2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,7 +586,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                   child: Text(subTitle, 
-                    style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.w900)),
+                    style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontWeight: FontWeight.w900)),
                 ),
                 GridView.builder(
                   shrinkWrap: true,
@@ -599,7 +599,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     childAspectRatio: 5,
                   ),
                   itemCount: subResults.length,
-                  itemBuilder: (context, index) => _buildPassItem(subResults[index]),
+                  itemBuilder: (context, index) => _buildPassItem(subResults[index], colors),
                 ),
               ],
             ),
@@ -609,7 +609,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildPortraitLayout() {
+  Widget _buildPortraitLayout(LadderThemeData colors) {
     final viewModel = context.read<LadderGameViewModel>();
     final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
     final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -631,44 +631,43 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            children: mainResults.map((result) => _buildPenaltyCard(result, isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
+            children: mainResults.map((result) => _buildPenaltyCard(result, colors, isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
           ),
         ),
         const SizedBox(height: 12),
         if (subResults.isNotEmpty)
           Text(subTitle,
-            style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontSize: 16, fontWeight: FontWeight.w900)),
+            style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontSize: 16, fontWeight: FontWeight.w900)),
         const SizedBox(height: 20),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Wrap(
             spacing: 12, runSpacing: 12,
             alignment: WrapAlignment.center,
-            children: subResults.map((result) => _buildPassItem(result)).toList(),
+            children: subResults.map((result) => _buildPassItem(result, colors)).toList(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPenaltyCard(ResultItem result, {bool compact = false, bool isWinMode = false, bool isTreatMode = false, bool isOrderMode = false}) {
+  Widget _buildPenaltyCard(ResultItem result, LadderThemeData colors, {bool compact = false, bool isWinMode = false, bool isTreatMode = false, bool isOrderMode = false}) {
     final i = _sortedResults.indexOf(result);
     
-    Color statusBg = NeonColors.modePenalty;
+    Color statusBg = colors.modePenalty;
     String titleText = '벌칙 당첨';
 
     if (isWinMode) {
-      statusBg = NeonColors.modeWin;
+      statusBg = colors.modeWin;
       titleText = '당첨 결과';
     } else if (isTreatMode) {
-      statusBg = NeonColors.modeShoot;
+      statusBg = colors.modeShoot;
       titleText = '오늘의 결제자!';
     } else if (isOrderMode) {
-      statusBg = NeonColors.modeOrder;
+      statusBg = colors.modeOrder;
       titleText = '영광의 1순위';
     }
     
-    // 모드 컬러의 진한 버전 (테두리 및 텍스트용)
     final darkerModeColor = Color.lerp(statusBg, Colors.black, 0.4)!;
 
     return Padding(
@@ -679,25 +678,25 @@ class _LadderResultScreenState extends State<LadderResultScreen>
           width: double.infinity,
           padding: EdgeInsets.all(compact ? 20 : 28),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colors.cardBg,
             borderRadius: BorderRadius.circular(32),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
                 statusBg.withOpacity(0.05),
-                statusBg.withOpacity(0.25), // 모드 컬러가 살짝 묻어나는 그라데이션
+                statusBg.withOpacity(0.2),
               ],
             ),
             border: Border.all(
-              color: darkerModeColor.withOpacity(0.5),
+              color: statusBg.withOpacity(0.4),
               width: 2.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: statusBg.withOpacity(0.2),
+                color: statusBg.withOpacity(0.15),
                 blurRadius: 15,
-                spreadRadius: 2,
+                spreadRadius: 1,
                 offset: const Offset(0, 8),
               ),
             ],
@@ -707,7 +706,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: darkerModeColor.withOpacity(0.1),
+                  color: statusBg.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -726,10 +725,10 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle, 
                   color: Colors.white,
-                  border: Border.all(color: darkerModeColor.withOpacity(0.2), width: 1.5),
+                  border: Border.all(color: statusBg.withOpacity(0.2), width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: statusBg.withOpacity(0.2),
+                      color: statusBg.withOpacity(0.15),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -742,7 +741,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               Text(
                 result.name, 
                 style: GoogleFonts.plusJakartaSans(
-                  color: NeonColors.stroke, 
+                  color: colors.textMain, 
                   fontSize: compact ? 18 : 22, 
                   fontWeight: FontWeight.w900,
                 ),
@@ -753,8 +752,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                 decoration: NeonTheme.getCardDecoration(
                   bg: statusBg, 
                   radius: 20,
-                ).copyWith(
-                  border: Border.all(color: NeonColors.stroke, width: 2.0),
+                  strokeColor: colors.stroke.withOpacity(0.2)
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -762,7 +760,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     result.text, 
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
-                      color: NeonColors.stroke, 
+                      color: Colors.white, 
                       fontSize: compact ? 20 : 26, 
                       fontWeight: FontWeight.w900,
                     ),
@@ -776,7 +774,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildPassItem(ResultItem result) {
+  Widget _buildPassItem(ResultItem result, LadderThemeData colors) {
     final i = _sortedResults.indexOf(result);
 
     return ScaleTransition(
@@ -784,9 +782,9 @@ class _LadderResultScreenState extends State<LadderResultScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.cardBg,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: NeonColors.stroke.withOpacity(0.1), width: 1.5),
+          border: Border.all(color: colors.stroke.withOpacity(0.1), width: 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -796,10 +794,10 @@ class _LadderResultScreenState extends State<LadderResultScreen>
             Text(
               result.name, 
               style: GoogleFonts.plusJakartaSans(
-                color: NeonColors.textSub, 
+                color: colors.textSub, 
                 fontSize: 14, 
-                fontWeight: FontWeight.w800
-              )
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),

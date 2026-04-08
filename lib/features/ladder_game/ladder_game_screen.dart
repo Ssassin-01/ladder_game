@@ -11,6 +11,8 @@ import 'ladder_game_mode.dart';
 import 'ladder_painter.dart';
 import 'ladder_result_screen.dart';
 
+import '../../features/settings/settings_view_model.dart';
+
 class LadderGameScreen extends StatefulWidget {
   const LadderGameScreen({super.key});
 
@@ -70,7 +72,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         _controllers.removeRange(viewModel.playerCount, _controllers.length);
       } else {
         for (int i = _controllers.length; i < viewModel.playerCount; i++) {
-          // Safety Check: Ensure the results exist before mapping to controllers
           final initialValue = i < viewModel.bottomResults.length ? viewModel.bottomResults[i] : '';
           _controllers.add(TextEditingController(text: initialValue));
         }
@@ -78,7 +79,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     }
     if (!_isAnimating) {
       for (int i = 0; i < viewModel.playerCount; i++) {
-        // Safety: Ensure both lists have the required index
         if (i < _controllers.length && i < viewModel.bottomResults.length) {
           if (_controllers[i].text != viewModel.bottomResults[i]) {
             _controllers[i].text = viewModel.bottomResults[i];
@@ -99,6 +99,11 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     }
     _stopStepping();
     super.dispose();
+  }
+
+  void _stopStepping() {
+    _stepTimer?.cancel();
+    _stepTimer = null;
   }
 
   void _startStepping(bool isIncrement, LadderGameViewModel viewModel) {
@@ -122,23 +127,15 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     _stepTimer = Timer.periodic(const Duration(milliseconds: 150), (_) => action());
   }
 
-  void _stopStepping() {
-    _stepTimer?.cancel();
-    _stepTimer = null;
-  }
-
   void _navigateToResults(LadderGameViewModel viewModel) {
     if (!mounted || _selectedStartIndices.isEmpty || _isNavigationTriggered) return;
     _isNavigationTriggered = true;
 
     final results = _selectedStartIndices.map((startIdx) {
-      // Bounds check for safety before navigation
       if (startIdx >= viewModel.currentParticipants.length) return null;
       
       final p = viewModel.currentParticipants[startIdx];
       final resIdx = _endIndexSnapshot[startIdx] ?? viewModel.getResultIndex(startIdx);
-      
-      // Safety: Ensure the calculated end index is within bottomResults bounds
       final safeResIdx = (resIdx < viewModel.bottomResults.length) ? resIdx : 0;
       final resText = _resultTextSnapshot[startIdx] ?? (safeResIdx < viewModel.bottomResults.length ? viewModel.bottomResults[safeResIdx] : '');
       
@@ -195,7 +192,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         if (mounted) _navigateToResults(viewModel);
       }
     } catch (e) {
-      // Animation was cancelled or failed, no action needed for now
+      // Animation was cancelled or failed
     }
   }
 
@@ -217,10 +214,13 @@ class _LadderGameScreenState extends State<LadderGameScreen>
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<LadderGameViewModel>();
+    final settings = context.watch<SettingsViewModel>();
+    final colors = settings.currentTheme;
     _updateControllers(viewModel);
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -230,7 +230,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         title: Text(
           '사다리 게임',
           style: GoogleFonts.plusJakartaSans(
-            color: NeonColors.primary,
+            color: colors.primary,
             fontSize: isLandscape ? 18 : 20,
             fontWeight: FontWeight.w900,
           ),
@@ -238,7 +238,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: isLandscape ? 20 : 22),
+            icon: Icon(Icons.arrow_back_ios_new, color: colors.primary, size: isLandscape ? 20 : 22),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -251,7 +251,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
               viewModel.toggleShroudActive();
             },
             icon: Icon(viewModel.isShroudActive ? Icons.visibility_off : Icons.visibility,
-              color: viewModel.isShroudActive ? const Color(0xFFBE2D06) : NeonColors.primary)),
+              color: viewModel.isShroudActive ? colors.modePenalty : colors.primary)),
           IconButton(
             onPressed: () {
               _resetGameState();
@@ -260,7 +260,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                 _controllers[i].text = viewModel.bottomResults[i];
               }
             },
-            icon: const Icon(Icons.refresh, color: NeonColors.primary)),
+            icon: Icon(Icons.refresh, color: colors.primary)),
         ],
       ),
       body: SafeArea(
@@ -302,8 +302,9 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                               activePathIndices: _activeAnimations.keys.toSet(),
                               animationMap: _activeAnimations,
                               participantColors: viewModel.currentParticipants.map((p) => p.color).toList(),
-                              viewModel: viewModel,
                               ladderHeight: ladderHeight,
+                              strokeColor: colors.stroke,
+                              viewModel: viewModel,
                             ),
                           ),
                         ),
@@ -327,15 +328,15 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                 duration: const Duration(milliseconds: 200),
                                 width: avatarSize, height: avatarSize,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF9F6EE), // 파스텔 크림
+                                  color: colors.cardBg,
                                   borderRadius: BorderRadius.circular(avatarSize * 0.4),
                                   border: Border.all(
-                                    color: isSelected ? p.color : const Color(0xFFD4B483), // 나무 느낌 경계
-                                    width: isSelected ? 3.5 : 2.5,
+                                    color: isSelected ? p.color : colors.stroke.withOpacity(0.2),
+                                    width: isSelected ? 3.5 : 2.0,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: isSelected ? p.color.withOpacity(0.5) : Colors.black.withOpacity(0.08),
+                                      color: isSelected ? p.color.withOpacity(0.4) : Colors.black.withOpacity(0.05),
                                       offset: Offset(0, isSelected ? 6 : 4),
                                       blurRadius: isSelected ? 12 : 6,
                                     ),
@@ -359,7 +360,6 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                               children: List.generate(viewModel.playerCount, (i) {
                                 final isTarget = _finishedEndIndices.contains(i);
                                 
-                                // Bounds check for result text
                                 if (i >= viewModel.bottomResults.length) return const SizedBox.shrink();
                                 
                                 final resultText = viewModel.bottomResults[i];
@@ -368,22 +368,21 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                 final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
                                 final bool isPass = (resultText.contains('통과') || resultText.contains('꽝') || resultText.contains('얻어먹기')) && !isOrderMode;
                                 
-                                // 결과 텍스트에서 이모지 제거 (정규식 사용)
                                 final cleanResultText = resultText.replaceAll(RegExp(r'[\u{1f300}-\u{1f5ff}\u{1f600}-\u{1f64f}\u{1f680}-\u{1f6ff}\u{1f700}-\u{1f77f}\u{1f780}-\u{1f7ff}\u{1f800}-\u{1f8ff}\u{1f900}-\u{1f9ff}\u{1fa00}-\u{1faff}\u{2600}-\u{26ff}\u{2700}-\u{27bf}\u{fe00}-\u{fe0f}]', unicode: true), '');
 
                                 Color statusColor;
                                 if (isPass) {
-                                  statusColor = const Color(0xFF8DAA5D); // 대나무 그린
+                                  statusColor = colors.modeWin.withOpacity(0.7);
                                 } else if (isWinMode) {
-                                  statusColor = const Color(0xFFD4B483); // 골드/우드
+                                  statusColor = colors.modeWin;
                                 } else if (isTreatMode) {
-                                  statusColor = const Color(0xFFE2725B); // 테라코타
+                                  statusColor = colors.modeShoot;
                                 } else if (isOrderMode) {
-                                  statusColor = const Color(0xFF5D4037); // 다크 브라운
+                                  statusColor = colors.primary;
                                 } else {
-                                  statusColor = const Color(0xFFBE2D06);
+                                  statusColor = colors.modePenalty;
                                 }
-  
+
                                 return Positioned(
                                   left: gap * (i + 1) - (gap * 0.9 / 2),
                                   child: AnimatedContainer(
@@ -391,14 +390,14 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                     width: gap * 0.9, height: resultSize * 0.75,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(12),
-                                      color: const Color(0xFFEFEBE9), // 아주 밝은 우드톤
+                                      color: colors.cardBg,
                                       border: Border.all(
-                                        color: isTarget ? statusColor : const Color(0xFFD7CCC8), 
-                                        width: isTarget ? 3.5 : 2.5
+                                        color: isTarget ? statusColor : colors.stroke.withOpacity(0.1), 
+                                        width: isTarget ? 3.0 : 2.0
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: isTarget ? statusColor.withOpacity(0.4) : Colors.black.withOpacity(0.05),
+                                          color: isTarget ? statusColor.withOpacity(0.3) : Colors.black.withOpacity(0.03),
                                           offset: const Offset(0, 4),
                                           blurRadius: isTarget ? 8 : 4,
                                         ),
@@ -410,7 +409,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                           padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
                                           child: Text(cleanResultText.trim(), textAlign: TextAlign.center,
                                             style: GoogleFonts.plusJakartaSans(
-                                              color: isTarget ? statusColor : const Color(0xFF5D4037),
+                                              color: isTarget ? statusColor : colors.textSub.withOpacity(0.5),
                                               fontSize: fontSize, 
                                               fontWeight: FontWeight.w900,
                                             )),
@@ -440,17 +439,21 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                                   left: 0, right: 0,
                                   height: ladderHeight,
                                   child: Container(
-                                    decoration: NeonTheme.getCardDecoration(radius: 32),
+                                    decoration: NeonTheme.getCardDecoration(
+                                      bg: colors.background.withOpacity(0.95),
+                                      radius: 32,
+                                      strokeColor: colors.stroke.withOpacity(0.1)
+                                    ),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(32),
                                       child: CustomPaint(
-                                        painter: _PatternPainter(color: const Color(0xFF8DAA5D).withOpacity(0.06)),
+                                        painter: _PatternPainter(color: colors.primary.withOpacity(0.05)),
                                       ),
                                     ),
                                   ),
                                 ),
                                 if (viewModel.isShroudActive && !_isAnimating)
-                                  Center(child: _configPanel(context, viewModel, ladderHeight)),
+                                  Center(child: _configPanel(context, viewModel, ladderHeight, colors)),
                               ],
                             ),
                           ),
@@ -467,7 +470,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
     );
   }
 
-  Widget _configPanel(BuildContext context, LadderGameViewModel viewModel, double ladderHeight) {
+  Widget _configPanel(BuildContext context, LadderGameViewModel viewModel, double ladderHeight, LadderThemeData colors) {
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -476,7 +479,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
         children: [
           Text('가로선 설정', 
             style: GoogleFonts.plusJakartaSans(
-              color: NeonColors.textSub, 
+              color: colors.textSub, 
               fontSize: isLandscape ? 12 : 14,
               fontWeight: FontWeight.bold,
             )),
@@ -489,6 +492,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                 onLongPressUp: _stopStepping,
                 child: Neon3DButton(
                   size: 40,
+                  baseColor: colors.primary,
                   onPressed: () {
                     if (viewModel.sectionCount > 1) {
                       viewModel.setSectionCount(viewModel.sectionCount - 1);
@@ -510,7 +514,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
                     style: GoogleFonts.plusJakartaSans(
-                      color: NeonColors.primary, 
+                      color: colors.primary, 
                       fontWeight: FontWeight.w900, 
                       fontSize: isLandscape ? 28 : 40,
                     ),
@@ -540,6 +544,7 @@ class _LadderGameScreenState extends State<LadderGameScreen>
                 onLongPressUp: _stopStepping,
                 child: Neon3DButton(
                   size: 40,
+                  baseColor: colors.primary,
                   onPressed: () {
                     if (viewModel.sectionCount < 100) {
                       viewModel.setSectionCount(viewModel.sectionCount + 1);

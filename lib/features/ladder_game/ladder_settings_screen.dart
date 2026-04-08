@@ -11,6 +11,8 @@ import 'ladder_game_view_model.dart';
 import 'ladder_game_screen.dart';
 import 'participant_manager_dialog.dart';
 
+import '../../features/settings/settings_view_model.dart';
+
 class LadderSettingsScreen extends StatefulWidget {
   final LadderGameMode mode;
 
@@ -89,6 +91,8 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<LadderGameViewModel>();
+    final settings = context.watch<SettingsViewModel>();
+    final colors = settings.currentTheme;
     final String title = _getModeTitle(widget.mode);
 
     // Ensure player count controller is in sync with VM (e.g. after mode change)
@@ -97,8 +101,8 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: NeonColors.background,
-      appBar: _buildAppBar(context, title, viewModel),
+      backgroundColor: colors.background,
+      appBar: _buildAppBar(context, title, viewModel, colors),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -107,21 +111,21 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               Column(
                 children: [
                   // 1. Participant Count Card
-                  _buildParticipantCard(viewModel),
+                  _buildParticipantCard(viewModel, colors),
                   const SizedBox(height: 20),
 
                   // 2. Ladder Speed Card (Order: Conditional based on mode)
                   if (widget.mode != LadderGameMode.team) ...[
-                    _buildSpeedCard(viewModel),
+                    _buildSpeedCard(viewModel, colors),
                     const SizedBox(height: 20),
                   ],
 
                   // 3. Mode Specific Content (The 3rd card in the sequence)
-                  _buildModeSpecificCard(viewModel),
+                  _buildModeSpecificCard(viewModel, colors),
                   
                   if (widget.mode == LadderGameMode.team) ...[
                     const SizedBox(height: 20),
-                    _buildSpeedCard(viewModel),
+                    _buildSpeedCard(viewModel, colors),
                   ],
                   
                   const SizedBox(height: 32),
@@ -157,7 +161,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
               ),
               const SizedBox(height: 60),
 
-              _buildFooter(),
+              _buildFooter(colors),
             ],
           ),
         ),
@@ -165,19 +169,19 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, String title, LadderGameViewModel viewModel) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, String title, LadderGameViewModel viewModel, LadderThemeData colors) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: 20),
+        icon: Icon(Icons.arrow_back_ios_new, color: colors.primary, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
         title,
         style: GoogleFonts.plusJakartaSans(
-          color: NeonColors.primary,
+          color: colors.primary,
           fontWeight: FontWeight.w900,
           fontSize: 20,
         ),
@@ -189,11 +193,11 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
             _syncControllersWithViewModel(viewModel);
             setState(() {});
           },
-          icon: const Icon(Icons.restart_alt, size: 18, color: NeonColors.primary),
+          icon: Icon(Icons.restart_alt, size: 18, color: colors.primary),
           label: Text(
             '초기화',
             style: GoogleFonts.plusJakartaSans(
-              color: NeonColors.primary,
+              color: colors.primary,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -204,10 +208,10 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  Widget _buildParticipantCard(LadderGameViewModel viewModel) {
+  Widget _buildParticipantCard(LadderGameViewModel viewModel, LadderThemeData colors) {
     return Container(
       padding: const EdgeInsets.all(28),
-      decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFF5F4EB)),
+      decoration: NeonTheme.getCardDecoration(bg: colors.cardBg, strokeColor: colors.stroke.withOpacity(0.1)),
       child: Column(
         children: [
           Row(
@@ -217,23 +221,23 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 children: [
                   Container(
                     width: 44, height: 44,
-                    decoration: BoxDecoration(color: NeonColors.pointPink, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.groups, size: 22, color: NeonColors.shadow),
+                    decoration: BoxDecoration(color: colors.modePenalty.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.groups, size: 22, color: colors.primary),
                   ),
                   const SizedBox(width: 14),
-                  Text('참가자 수', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: NeonColors.primary)),
+                  Text('참가자 수', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textMain)),
                 ],
               ),
               Neon3DButton(
                 size: 44,
-                baseColor: NeonColors.pointPink,
+                baseColor: colors.modePenalty.withOpacity(0.5),
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (context) => const ParticipantManagerDialog(),
                   );
                 },
-                child: const Icon(Icons.inventory, size: 18, color: NeonColors.shadow),
+                child: Icon(Icons.inventory, size: 18, color: colors.stroke),
               ),
             ],
           ),
@@ -246,6 +250,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 onLongPressUp: _stopStepping,
                 child: Neon3DButton(
                   size: 52,
+                  baseColor: colors.primary,
                   onPressed: () {
                     if (viewModel.playerCount > 2) {
                       viewModel.setPlayerCount(viewModel.playerCount - 1);
@@ -268,7 +273,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 52, 
                     fontWeight: FontWeight.w900,
-                    color: NeonColors.primary,
+                    color: colors.primary,
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -296,6 +301,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 onLongPressUp: _stopStepping,
                 child: Neon3DButton(
                   size: 52,
+                  baseColor: colors.primary,
                   onPressed: () {
                     if (viewModel.playerCount < 20) {
                       viewModel.setPlayerCount(viewModel.playerCount + 1);
@@ -312,31 +318,32 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  Widget _buildSpeedCard(LadderGameViewModel viewModel) {
+  Widget _buildSpeedCard(LadderGameViewModel viewModel, LadderThemeData colors) {
     return Container(
       padding: const EdgeInsets.all(28),
-      decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFFEFCF4)),
+      decoration: NeonTheme.getCardDecoration(bg: colors.cardBg, strokeColor: colors.stroke.withOpacity(0.1)),
       child: Column(
         children: [
           Row(
             children: [
               Container(
                 width: 44, height: 44,
-                decoration: BoxDecoration(color: NeonColors.pointGreen, borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.speed, size: 22, color: NeonColors.primary),
+                decoration: BoxDecoration(color: colors.modeWin.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.speed, size: 22, color: colors.primary),
               ),
               const SizedBox(width: 14),
-              Text('사다리 속도', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: NeonColors.primary)),
+              Text('사다리 속도', style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textMain)),
             ],
           ),
           const SizedBox(height: 24),
           SliderTheme(
             data: SliderThemeData(
-              activeTrackColor: NeonColors.pointGreen,
-              inactiveTrackColor: NeonColors.pointGreen.withValues(alpha: 0.2),
-              thumbColor: NeonColors.primary,
+              activeTrackColor: colors.primary,
+              inactiveTrackColor: colors.primary.withOpacity(0.1),
+              thumbColor: colors.primary,
               trackHeight: 10,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+              overlayColor: colors.primary.withOpacity(0.2),
             ),
             child: Slider(
               value: viewModel.speedLevel.toDouble(),
@@ -350,9 +357,9 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('느릿느릿', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: NeonColors.primary.withValues(alpha: 0.6))),
-              Text('보통', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: NeonColors.primary.withValues(alpha: 0.6))),
-              Text('빠르게', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: NeonColors.primary.withValues(alpha: 0.6))),
+              Text('느릿느릿', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: colors.textSub.withOpacity(0.6))),
+              Text('보통', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: colors.textSub.withOpacity(0.6))),
+              Text('빠르게', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.bold, color: colors.textSub.withOpacity(0.6))),
             ],
           ),
         ],
@@ -360,35 +367,36 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  Widget _buildModeSpecificCard(LadderGameViewModel viewModel) {
+  Widget _buildModeSpecificCard(LadderGameViewModel viewModel, LadderThemeData colors) {
     if (widget.mode == LadderGameMode.order) return const SizedBox.shrink();
 
     if (widget.mode == LadderGameMode.team) {
       return Container(
         padding: const EdgeInsets.all(24),
-        decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFF5F4EB)),
+        decoration: NeonTheme.getCardDecoration(bg: colors.cardBg, strokeColor: colors.stroke.withOpacity(0.1)),
         child: Column(
           children: [
             Row(
               children: [
                 Container(
                   width: 44, height: 44,
-                  decoration: BoxDecoration(color: NeonColors.pointGreen, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.people_alt_outlined, size: 22, color: NeonColors.primary),
+                  decoration: BoxDecoration(color: colors.modeTeam.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(Icons.people_alt_outlined, size: 22, color: colors.primary),
                 ),
                 const SizedBox(width: 14),
-                Text('팀 나누기 구성', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w900, color: NeonColors.primary)),
+                Text('팀 나누기 구성', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w900, color: colors.textMain)),
               ],
             ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('만들 팀 수', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: NeonColors.textMain)),
+                Text('만들 팀 수', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textMain)),
                 Row(
                   children: [
                     Neon3DButton(
                       size: 40,
+                      baseColor: colors.primary,
                       onPressed: () {
                         if (viewModel.teamCount > 2) {
                           viewModel.setTeamCount(viewModel.teamCount - 1);
@@ -400,10 +408,11 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                     Container(
                       width: 44,
                       alignment: Alignment.center,
-                      child: Text('${viewModel.teamCount}', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: NeonColors.primary)),
+                      child: Text('${viewModel.teamCount}', style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w900, color: colors.primary)),
                     ),
                     Neon3DButton(
                       size: 40,
+                      baseColor: colors.primary,
                       onPressed: () {
                         if (viewModel.teamCount < viewModel.playerCount) {
                           viewModel.setTeamCount(viewModel.teamCount + 1);
@@ -423,13 +432,13 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('팀장 랜덤 선정', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: NeonColors.textMain)),
+                Text('팀장 랜덤 선정', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: colors.textMain)),
                 GestureDetector(
                   onTap: () => viewModel.setHasTeamLeader(!viewModel.hasTeamLeader),
                   child: Container(
                     width: 100,
                     height: 40,
-                    decoration: BoxDecoration(color: const Color(0xFFE9E9E0), borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(color: colors.stroke.withOpacity(0.05), borderRadius: BorderRadius.circular(20)),
                     child: Stack(
                       children: [
                         AnimatedPositioned(
@@ -440,9 +449,9 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                             width: 46,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: NeonColors.primary,
+                              color: colors.primary,
                               borderRadius: BorderRadius.circular(16),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), offset: const Offset(0, 2), blurRadius: 3)],
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), offset: const Offset(0, 2), blurRadius: 3)],
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -452,9 +461,9 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                           ),
                         ),
                         if (!viewModel.hasTeamLeader)
-                          const Positioned(right: 12, top: 0, bottom: 0, child: Center(child: Text('ON', style: TextStyle(color: NeonColors.textSub, fontSize: 11, fontWeight: FontWeight.bold)))),
+                          Positioned(right: 12, top: 0, bottom: 0, child: Center(child: Text('ON', style: TextStyle(color: colors.textSub.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold)))),
                         if (viewModel.hasTeamLeader)
-                          const Positioned(left: 12, top: 0, bottom: 0, child: Center(child: Text('OFF', style: TextStyle(color: NeonColors.textSub, fontSize: 11, fontWeight: FontWeight.bold)))),
+                          Positioned(left: 12, top: 0, bottom: 0, child: Center(child: Text('OFF', style: TextStyle(color: colors.textSub.withOpacity(0.3), fontSize: 11, fontWeight: FontWeight.bold)))),
                       ],
                     ),
                   ),
@@ -468,18 +477,18 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
 
     return Container(
       padding: const EdgeInsets.all(28),
-      decoration: NeonTheme.getCardDecoration(bg: const Color(0xFFE9E9DE)),
+      decoration: NeonTheme.getCardDecoration(bg: colors.cardBg, strokeColor: colors.stroke.withOpacity(0.1)),
       child: Column(
         children: [
           Row(
             children: [
               Container(
                 width: 44, height: 44,
-                decoration: BoxDecoration(color: NeonColors.pointOrange, borderRadius: BorderRadius.circular(12)),
-                child: Icon(_getModeIcon(widget.mode), size: 22, color: NeonColors.primary),
+                decoration: BoxDecoration(color: colors.modeShoot.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Icon(_getModeIcon(widget.mode), size: 22, color: colors.primary),
               ),
               const SizedBox(width: 14),
-              Text(_getModeSettingLabel(widget.mode), style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: NeonColors.primary)),
+              Text(_getModeSettingLabel(widget.mode), style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textMain)),
             ],
           ),
           const SizedBox(height: 24),
@@ -495,16 +504,16 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                     child: Container(
                       height: 60,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colors.background,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: NeonColors.stroke, width: 2.0),
+                        border: Border.all(color: colors.stroke.withOpacity(0.1), width: 1.5),
                       ),
                       child: Row(
                         children: [
                           Container(
                             width: 50,
                             alignment: Alignment.center,
-                            child: Text('${index + 1}', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w900, color: NeonColors.primary)),
+                            child: Text('${index + 1}', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w900, color: colors.primary)),
                           ),
                           Expanded(
                             child: TextField(
@@ -512,9 +521,9 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                               decoration: InputDecoration(
                                 hintText: _getHintText(widget.mode),
                                 border: InputBorder.none,
-                                hintStyle: GoogleFonts.plusJakartaSans(color: NeonColors.textSub.withValues(alpha: 0.5)),
+                                hintStyle: GoogleFonts.plusJakartaSans(color: colors.textSub.withOpacity(0.3)),
                               ),
-                              style: GoogleFonts.plusJakartaSans(fontSize: 15, color: NeonColors.textMain, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.plusJakartaSans(fontSize: 15, color: colors.textMain, fontWeight: FontWeight.w600),
                               onChanged: (val) {
                                 viewModel.updatePenaltyContent(index, val);
                                 setState(() {}); // To update start button state
@@ -533,7 +542,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                         setState(() => _syncControllersWithViewModel(viewModel));
                       }
                     },
-                    child: const Icon(Icons.remove_circle, color: Color(0xFFBE2D06), size: 28),
+                    child: Icon(Icons.remove_circle, color: colors.modePenalty, size: 28),
                   ),
                 ],
               );
@@ -553,13 +562,13 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: CustomPaint(
-                painter: DashedRectPainter(radius: 16, color: NeonColors.primary.withValues(alpha: 0.3)),
+                painter: DashedRectPainter(radius: 16, color: colors.primary.withOpacity(0.3)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add, size: 20, color: NeonColors.primary),
+                    Icon(Icons.add, size: 20, color: colors.primary),
                     const SizedBox(width: 10),
-                    Text('${_getModeItemName(widget.mode)} 추가', style: GoogleFonts.plusJakartaSans(fontSize: 16, color: NeonColors.primary, fontWeight: FontWeight.bold)),
+                    Text('${_getModeItemName(widget.mode)} 추가', style: GoogleFonts.plusJakartaSans(fontSize: 16, color: colors.primary, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -570,12 +579,12 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(LadderThemeData colors) {
     return Column(
       children: [
         Opacity(
           opacity: 0.1,
-          child: Icon(_getFooterIcon(widget.mode), size: 100, color: NeonColors.primary),
+          child: Icon(_getFooterIcon(widget.mode), size: 100, color: colors.primary),
         ),
         const SizedBox(height: 16),
         Padding(
@@ -585,7 +594,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.gaegu(
               fontSize: 18, 
-              color: NeonColors.textSub, 
+              color: colors.textSub, 
               fontStyle: FontStyle.italic, 
               fontWeight: FontWeight.bold
             ),
@@ -672,7 +681,7 @@ class _LadderSettingsScreenState extends State<LadderSettingsScreen> {
       default: return '내용을 입력하세요';
     }
   }
-}
+} // End of _LadderSettingsScreenState
 
 class DashedRectPainter extends CustomPainter {
   final double radius;

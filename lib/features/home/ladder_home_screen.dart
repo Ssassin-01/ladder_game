@@ -5,6 +5,10 @@ import '../../core/neon_theme.dart';
 import '../ladder_game/ladder_game_mode.dart';
 import '../ladder_game/ladder_settings_screen.dart';
 
+import '../../features/settings/settings_screen.dart';
+import '../../features/settings/settings_view_model.dart';
+import 'package:provider/provider.dart';
+
 class LadderHomeScreen extends StatefulWidget {
   const LadderHomeScreen({super.key});
 
@@ -15,38 +19,55 @@ class LadderHomeScreen extends StatefulWidget {
 class _LadderHomeScreenState extends State<LadderHomeScreen> {
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsViewModel>();
+    final colors = settings.currentTheme;
+
     return Scaffold(
-      backgroundColor: NeonColors.background,
+      backgroundColor: colors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             children: [
-              // 1. Top Logo Chip
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: NeonColors.stroke.withValues(alpha: 0.1), width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.terrain, size: 18, color: NeonColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Ladder Master',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.bold,
-                          color: NeonColors.textMain,
-                          fontSize: 14,
+              // 1. Top Logo Chip & Settings Icon
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: colors.cardBg,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: colors.primary.withValues(alpha: 0.5), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(color: colors.primary.withValues(alpha: 0.1), blurRadius: 4, spreadRadius: 1),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.terrain, size: 18, color: colors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Ladder Master',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            color: colors.textMain,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                  IconButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    ),
+                    icon: Icon(Icons.settings_rounded, color: colors.textSub),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
               
@@ -58,7 +79,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 42,
                       fontWeight: FontWeight.w900,
-                      color: NeonColors.textMain,
+                      color: colors.textMain,
                       letterSpacing: -1,
                     ),
                   ),
@@ -66,7 +87,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                     '내기 한 판?',
                     style: GoogleFonts.gaegu(
                       fontSize: 20,
-                      color: NeonColors.textSub,
+                      color: colors.textSub,
                     ),
                   ),
                 ],
@@ -74,17 +95,16 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
               const SizedBox(height: 40),
 
               // 3. Mode Buttons - Asymmetrical Grid
-              // A. Penalty (Hero Button)
               _buildLargeModeButton(
                 context,
                 LadderGameMode.penalty,
                 '벌칙',
                 Icons.dangerous,
-                NeonColors.modePenalty,
+                colors.modePenalty,
+                colors,
               ),
               const SizedBox(height: 20),
 
-              // B. 2x2 Grid for Other Modes
               Row(
                 children: [
                   Expanded(
@@ -93,7 +113,8 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       LadderGameMode.win,
                       '당첨',
                       Icons.star,
-                      NeonColors.modeWin,
+                      colors.modeWin,
+                      colors,
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -103,7 +124,8 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       LadderGameMode.treat,
                       '쏘기',
                       Icons.icecream,
-                      NeonColors.modeShoot,
+                      colors.modeShoot,
+                      colors,
                     ),
                   ),
                 ],
@@ -117,7 +139,8 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       LadderGameMode.order,
                       '순서',
                       Icons.format_list_numbered,
-                      NeonColors.modeOrder,
+                      colors.modeOrder,
+                      colors,
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -127,19 +150,20 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       LadderGameMode.team,
                       '팀 나누기',
                       Icons.groups,
-                      NeonColors.modeTeam,
+                      colors.modeTeam,
+                      colors,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              // C. Manual Input (Dashed Footer Button)
               _buildDashedButton(
                 context,
                 LadderGameMode.manual,
                 '직접 입력',
                 Icons.edit,
+                colors,
               ),
               const SizedBox(height: 40),
             ],
@@ -149,7 +173,13 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
     );
   }
 
-  Widget _buildLargeModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor) {
+  Widget _buildLargeModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor, LadderThemeData colors) {
+    // Determine context-aware text/icon color for the button
+    final bool isNeon = bgColor.value == colors.primary.value || colors.background.value == 0xFF0F0F1A;
+    final Color contentColor = isNeon 
+        ? colors.onPrimary 
+        : (bgColor.computeLuminance() > 0.6 ? colors.textMain : Colors.white);
+
     return GestureDetector(
       onTap: () => _navigateToSettings(context, mode),
       child: Container(
@@ -158,8 +188,14 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: NeonColors.stroke, width: 2),
-          boxShadow: NeonColors.get3DShadow(NeonColors.stroke.withValues(alpha: 0.1)),
+          border: Border.all(color: colors.stroke, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: colors.stroke.withValues(alpha: 0.1),
+              offset: const Offset(0, 4),
+              blurRadius: 0,
+            ),
+          ],
         ),
         child: Stack(
           children: [
@@ -170,20 +206,20 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning, size: 20, color: NeonColors.stroke.withOpacity(0.5)),
+                      Icon(Icons.warning, size: 20, color: contentColor.withValues(alpha: 0.5)),
                       const SizedBox(width: 8),
                       Text(
                         label,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          color: NeonColors.textMain,
+                          color: contentColor,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Container(width: 60, height: 4, decoration: BoxDecoration(color: NeonColors.stroke.withOpacity(0.2), borderRadius: BorderRadius.circular(2))),
+                  Container(width: 60, height: 4, decoration: BoxDecoration(color: contentColor.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2))),
                 ],
               ),
             ),
@@ -193,12 +229,12 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
               child: Container(
                 width: 100, height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 2, style: BorderStyle.solid),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                 ),
                 child: Center(
-                  child: Icon(icon, size: 48, color: NeonColors.stroke),
+                  child: Icon(icon, size: 48, color: contentColor),
                 ),
               ),
             ),
@@ -208,7 +244,13 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
     );
   }
 
-  Widget _buildGridModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor) {
+  Widget _buildGridModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor, LadderThemeData colors) {
+    // Context-aware colors
+    final bool isNeon = bgColor.value == colors.primary.value || colors.background.value == 0xFF0F0F1A;
+    final Color contentColor = isNeon 
+        ? colors.onPrimary 
+        : (bgColor.computeLuminance() > 0.6 ? colors.textMain : Colors.white);
+
     return GestureDetector(
       onTap: () => _navigateToSettings(context, mode),
       child: Container(
@@ -216,7 +258,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(40),
-          border: Border.all(color: NeonColors.stroke, width: 2),
+          border: Border.all(color: colors.stroke, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -224,11 +266,11 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
-                border: Border.all(color: NeonColors.stroke, width: 1.5),
+                border: Border.all(color: contentColor.withValues(alpha: 0.3), width: 1.5),
               ),
-              child: Icon(icon, size: 40, color: NeonColors.stroke),
+              child: Icon(icon, size: 40, color: contentColor),
             ),
             const SizedBox(height: 16),
             Text(
@@ -236,7 +278,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: NeonColors.textMain,
+                color: contentColor,
               ),
             ),
           ],
@@ -245,30 +287,29 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
     );
   }
 
-  Widget _buildDashedButton(BuildContext context, LadderGameMode mode, String label, IconData icon) {
+  Widget _buildDashedButton(BuildContext context, LadderGameMode mode, String label, IconData icon, LadderThemeData colors) {
     return GestureDetector(
       onTap: () => _navigateToSettings(context, mode),
       child: Container(
         width: double.infinity,
         height: 70,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.cardBg,
           borderRadius: BorderRadius.circular(35),
-          border: Border.all(color: NeonColors.stroke, width: 2, style: BorderStyle.none),
         ),
         child: CustomPaint(
-          painter: _DashedRectPainter(color: NeonColors.stroke, radius: 35),
+          painter: _DashedRectPainter(color: colors.stroke, radius: 35),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: NeonColors.stroke),
+              Icon(icon, size: 20, color: colors.stroke),
               const SizedBox(width: 12),
               Text(
                 label,
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: NeonColors.textMain,
+                  color: colors.textMain,
                 ),
               ),
             ],

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../core/neon_theme.dart';
+import 'package:provider/provider.dart';
+import '../../features/settings/settings_view_model.dart';
 
 class Neon3DButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onPressed;
   final double size;
-  final Color baseColor;
-  final Color shadowColor;
+  final Color? baseColor;
+  final Color? shadowColor;
   final bool isCircle;
 
   const Neon3DButton({
@@ -14,8 +15,8 @@ class Neon3DButton extends StatefulWidget {
     required this.child,
     this.onPressed,
     this.size = 64,
-    this.baseColor = NeonColors.primary,
-    this.shadowColor = NeonColors.shadow,
+    this.baseColor,
+    this.shadowColor,
     this.isCircle = true,
   });
 
@@ -46,7 +47,11 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     const double shadowDepth = 4.0;
     final bool isEnabled = widget.onPressed != null;
+    final colors = context.watch<SettingsViewModel>().currentTheme;
     
+    final Color effectiveBaseColor = widget.baseColor ?? colors.primary;
+    final Color effectiveStrokeColor = colors.stroke;
+
     return GestureDetector(
       onPanDown: (_) {
          if (isEnabled) { setState(() => _isPressed = true); _controller.forward(); }
@@ -73,14 +78,14 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
             padding: EdgeInsets.only(top: currentTranslateY),
             child: Container(
               decoration: BoxDecoration(
-                color: isEnabled ? widget.baseColor : const Color(0xFFDED9CD),
+                color: isEnabled ? effectiveBaseColor : const Color(0xFFDED9CD),
                 shape: widget.isCircle ? BoxShape.circle : BoxShape.rectangle,
                 borderRadius: widget.isCircle ? null : BorderRadius.circular(24),
-                border: Border.all(color: NeonColors.stroke.withValues(alpha: isEnabled ? 1.0 : 0.4), width: 2),
+                border: Border.all(color: effectiveStrokeColor.withValues(alpha: isEnabled ? 1.0 : 0.4), width: 2),
                 boxShadow: [
                   if (!_isPressed && isEnabled)
                     BoxShadow(
-                      color: NeonColors.stroke,
+                      color: effectiveStrokeColor,
                       offset: Offset(0, currentShadowDepth),
                       blurRadius: 0,
                     ),
@@ -101,11 +106,13 @@ class _Neon3DButtonState extends State<Neon3DButton> with SingleTickerProviderSt
 class Neon3DBigButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
+  final Color? color;
 
   const Neon3DBigButton({
     super.key,
     required this.label,
     this.onPressed,
+    this.color,
   });
 
   @override
@@ -119,7 +126,14 @@ class _Neon3DBigButtonState extends State<Neon3DBigButton> {
   Widget build(BuildContext context) {
     const double shadowDepth = 8.0;
     final bool isEnabled = widget.onPressed != null;
+    final colors = context.watch<SettingsViewModel>().currentTheme;
     
+    final Color effectiveColor = widget.color ?? colors.primary;
+    // Determine context-aware text color
+    final Color textColor = (widget.color == null) 
+        ? colors.onPrimary 
+        : (widget.color == colors.accent ? colors.onAccent : Colors.white);
+
     return GestureDetector(
       onTapDown: (_) {
         if (isEnabled) setState(() => _isPressed = true);
@@ -137,14 +151,14 @@ class _Neon3DBigButtonState extends State<Neon3DBigButton> {
           width: double.infinity,
           height: 64,
           decoration: BoxDecoration(
-            color: isEnabled ? NeonColors.primary : const Color(0xFFDED9CD),
+            color: isEnabled ? effectiveColor : const Color(0xFFDED9CD),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: NeonColors.stroke.withValues(alpha: isEnabled ? 1.0 : 0.4), width: 2),
+            border: Border.all(color: colors.stroke.withValues(alpha: isEnabled ? 1.0 : 0.4), width: 2),
             boxShadow: [
               if (!_isPressed && isEnabled)
-                const BoxShadow(
-                  color: NeonColors.stroke,
-                  offset: Offset(0, shadowDepth),
+                BoxShadow(
+                  color: colors.stroke,
+                  offset: const Offset(0, shadowDepth),
                   blurRadius: 0,
                 ),
             ],
@@ -153,7 +167,7 @@ class _Neon3DBigButtonState extends State<Neon3DBigButton> {
           child: Text(
             widget.label,
             style: TextStyle(
-              color: isEnabled ? Colors.white : NeonColors.textSub.withValues(alpha: 0.6),
+              color: isEnabled ? textColor : colors.textSub.withValues(alpha: 0.6),
               fontWeight: FontWeight.w900,
               fontSize: 20,
               letterSpacing: 1.2,

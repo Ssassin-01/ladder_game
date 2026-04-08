@@ -10,6 +10,7 @@ class LadderPainter extends CustomPainter {
   final List<Color>? participantColors;
   final LadderGameViewModel? viewModel;
   final double ladderHeight;
+  final Color strokeColor;
 
   LadderPainter({
     required this.playerCount,
@@ -20,6 +21,7 @@ class LadderPainter extends CustomPainter {
     required this.animationMap,
     this.viewModel,
     required this.ladderHeight,
+    required this.strokeColor,
   }) : super(repaint: Listenable.merge(animationMap.values.toList()));
 
   @override
@@ -27,9 +29,9 @@ class LadderPainter extends CustomPainter {
     final sectionWidth = size.width / (playerCount + 1);
     final sectionHeight = ladderHeight / (sectionCount + 1);
 
-    // 대나무 기본 페인트
+    // 사다리 기본 페인트
     final bambooPaint = Paint()
-      ..color = const Color(0xFF8DAA5D) // 대나무 그린
+      ..color = strokeColor.withOpacity(0.8)
       ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;

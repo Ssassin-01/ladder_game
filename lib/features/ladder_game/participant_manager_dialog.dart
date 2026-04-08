@@ -6,6 +6,8 @@ import 'ladder_game_view_model.dart';
 import '../../core/sound_manager.dart';
 import '../../core/widgets/neon_3d_button.dart';
 
+import '../../features/settings/settings_view_model.dart';
+
 class ParticipantManagerDialog extends StatefulWidget {
   const ParticipantManagerDialog({super.key});
 
@@ -26,8 +28,12 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
   }
 
   void _rebuildControllers(LadderGameViewModel viewModel) {
-    for (final c in _nameControllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _nameControllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     _nameControllers.clear();
     _focusNodes.clear();
 
@@ -57,8 +63,12 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
 
   @override
   void dispose() {
-    for (final c in _nameControllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _nameControllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     _scrollController.dispose();
     super.dispose();
   }
@@ -73,17 +83,238 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
     Navigator.pop(context);
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<LadderGameViewModel>();
+    final settings = context.watch<SettingsViewModel>();
+    final colors = settings.currentTheme;
+
+    if (_nameControllers.length != viewModel.playerCount) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _rebuildControllers(viewModel));
+      });
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.background,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: colors.stroke, width: 2.5),
+          boxShadow: [
+            BoxShadow(
+              color: colors.primary.withValues(alpha: 0.2),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: _saveAndClose,
+                    icon: Icon(Icons.arrow_back_ios_new, size: 22, color: colors.primary),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '명단 관리',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: colors.textMain,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Neon3DButton(
+                    size: 40,
+                    onPressed: () {
+                      if (viewModel.playerCount > 2) {
+                        viewModel.setPlayerCount(viewModel.playerCount - 1);
+                      }
+                    },
+                    child: Icon(Icons.remove, color: colors.onPrimary, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 32,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${viewModel.playerCount}',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: colors.primary, 
+                        fontWeight: FontWeight.w900, 
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Neon3DButton(
+                    size: 40,
+                    onPressed: () {
+                      if (viewModel.playerCount < 20) {
+                        viewModel.setPlayerCount(viewModel.playerCount + 1);
+                      }
+                    },
+                    child: Icon(Icons.add, color: colors.onPrimary, size: 18),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: colors.stroke.withValues(alpha: 0.1)),
+            Flexible(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shrinkWrap: true,
+                itemCount: viewModel.playerCount,
+                itemBuilder: (_, i) {
+                  if (i >= _nameControllers.length || i >= viewModel.currentParticipants.length) {
+                    return const SizedBox();
+                  }
+                  final p = viewModel.currentParticipants[i];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            SoundManager().playTick();
+                            _showAnimalPicker(i);
+                          },
+                          child: Container(
+                            width: 52, height: 48,
+                            decoration: BoxDecoration(
+                              color: colors.cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: colors.stroke.withValues(alpha: 0.15)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.shadow.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(p.emoji, style: const TextStyle(fontSize: 26)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _nameControllers[i],
+                            focusNode: _focusNodes[i],
+                            cursorColor: colors.primary,
+                            style: GoogleFonts.plusJakartaSans(color: colors.textMain, fontSize: 16, fontWeight: FontWeight.w700),
+                            decoration: InputDecoration(
+                              hintText: '참가자 이름',
+                              hintStyle: TextStyle(color: colors.textSub.withValues(alpha: 0.5)),
+                              filled: true,
+                              fillColor: colors.cardBg,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide(color: colors.stroke.withValues(alpha: 0.2), width: 1.5),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide(color: colors.stroke.withValues(alpha: 0.3), width: 1.5),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide(color: colors.primary, width: 2),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            onChanged: (val) => viewModel.updateParticipantName(i, val),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Divider(height: 1, color: colors.stroke.withValues(alpha: 0.1)),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Neon3DButton(
+                      size: 60,
+                      isCircle: false,
+                      baseColor: colors.cardBg,
+                      onPressed: () {
+                        SoundManager().playTick();
+                        _showLoadDialog();
+                      },
+                      child: Text(
+                        '불러오기',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: colors.textMain,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Neon3DButton(
+                      size: 60,
+                      isCircle: false,
+                      baseColor: colors.primary,
+                      onPressed: () {
+                        SoundManager().playTick();
+                        _showSaveDialog();
+                      },
+                      child: Text(
+                        '명단 저장',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: colors.onPrimary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAnimalPicker(int index) {
     final viewModel = context.read<LadderGameViewModel>();
+    final settings = context.read<SettingsViewModel>();
+    final colors = settings.currentTheme;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: colors.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(32),
-          side: const BorderSide(color: NeonColors.primary, width: 2),
+          side: BorderSide(color: colors.stroke, width: 2),
         ),
-        title: const Text('동물 선택', style: TextStyle(color: NeonColors.primary, fontWeight: FontWeight.bold)),
+        title: Text('동물 선택', style: TextStyle(color: colors.primary, fontWeight: FontWeight.w900)),
         content: SizedBox(
           width: double.maxFinite,
           height: 280,
@@ -107,9 +338,9 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9F7F2),
+                    color: colors.cardBg,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: NeonColors.textSub.withOpacity(0.1)),
+                    border: Border.all(color: colors.stroke.withValues(alpha: 0.1)),
                   ),
                   child: Center(
                     child: Text(animal.emoji, style: const TextStyle(fontSize: 24)),
@@ -122,7 +353,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소', style: TextStyle(color: NeonColors.textSub)),
+            child: Text('취소', style: TextStyle(color: colors.textSub)),
           ),
         ],
       ),
@@ -131,14 +362,17 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
 
   void _showSaveDialog() async {
     final viewModel = context.read<LadderGameViewModel>();
+    final settings = context.read<SettingsViewModel>();
+    final colors = settings.currentTheme;
+
     final lists = await viewModel.getSavedLists();
     if (lists.length >= 5) {
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: const BorderSide(color: Color(0xFFBE2D06), width: 2)),
+          backgroundColor: colors.background,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: const BorderSide(color: Color(0xFFBE2D06), width: 2.5)),
           title: Row(
             children: [
               const Icon(Icons.warning_amber_rounded, color: Color(0xFFBE2D06)),
@@ -146,11 +380,12 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
               Text('저장 용량 초과', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: const Color(0xFFBE2D06))),
             ],
           ),
-          content: Text('명단은 최대 5개까지만 저장할 수 있습니다.\n기존 명단을 삭제한 후 다시 시도해 주세요.', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: NeonColors.textMain)),
+          content: Text('명단은 최대 5개까지만 저장할 수 있습니다.\n기존 명단을 삭제한 후 다시 시도해 주세요.', 
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: colors.textMain)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('확인', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
+              child: Text('확인', style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -169,19 +404,19 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
         return Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
-            decoration: NeonTheme.getCardDecoration(radius: 28),
+            decoration: NeonTheme.getCardDecoration(radius: 28, bg: colors.background, strokeColor: colors.stroke),
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.drive_file_rename_outline, color: NeonColors.primary, size: 24),
+                    Icon(Icons.drive_file_rename_outline, color: colors.primary, size: 24),
                     const SizedBox(width: 12),
                     Text(
                       '명단 저장',
                       style: GoogleFonts.plusJakartaSans(
-                        color: NeonColors.primary,
+                        color: colors.textMain,
                         fontWeight: FontWeight.w900,
                         fontSize: 20,
                       ),
@@ -190,19 +425,20 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                 ),
                 const SizedBox(height: 20),
                 TextField(
-                  style: GoogleFonts.plusJakartaSans(color: NeonColors.textMain, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.plusJakartaSans(color: colors.textMain, fontWeight: FontWeight.w700),
+                  cursorColor: colors.primary,
                   decoration: InputDecoration(
                     hintText: '저장할 이름을 입력하세요',
-                    hintStyle: GoogleFonts.plusJakartaSans(color: NeonColors.textSub.withOpacity(0.5)),
+                    hintStyle: GoogleFonts.plusJakartaSans(color: colors.textSub.withValues(alpha: 0.5)),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: colors.cardBg,
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: NeonColors.stroke, width: 2),
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide(color: colors.stroke.withValues(alpha: 0.3), width: 2),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: NeonColors.primary, width: 2),
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide(color: colors.primary, width: 2),
                     ),
                   ),
                   autofocus: true,
@@ -214,13 +450,13 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: Text('취소', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
+                        child: Text('취소', style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Neon3DButton(
-                        size: 48,
+                        size: 52,
                         isCircle: false,
                         onPressed: () async {
                           if (presetName.trim().isNotEmpty) {
@@ -232,11 +468,11 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                             navThis.pop();
                             messenger.showSnackBar(SnackBar(
                               content: Text("'$presetName' 명단이 저장되었습니다."),
-                              backgroundColor: NeonColors.primary,
+                              backgroundColor: colors.primary,
                             ));
                           }
                         },
-                        child: const Text('저장', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Text('저장', style: TextStyle(color: colors.onPrimary, fontWeight: FontWeight.w900)),
                       ),
                     ),
                   ],
@@ -251,6 +487,9 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
 
   void _showLoadDialog() async {
     final viewModel = context.read<LadderGameViewModel>();
+    final settings = context.read<SettingsViewModel>();
+    final colors = settings.currentTheme;
+
     final lists = await viewModel.getSavedLists();
     if (!mounted) return;
     showDialog(
@@ -259,7 +498,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
         return Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
-            decoration: NeonTheme.getCardDecoration(radius: 28, bg: const Color(0xFFF5F4EB)),
+            decoration: NeonTheme.getCardDecoration(radius: 28, bg: colors.background, strokeColor: colors.stroke),
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -268,7 +507,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.arrow_back_ios_new, color: NeonColors.primary, size: 18),
+                      icon: Icon(Icons.arrow_back_ios_new, color: colors.primary, size: 18),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -276,7 +515,7 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                     Text(
                       '명단 불러오기',
                       style: GoogleFonts.plusJakartaSans(
-                        color: NeonColors.primary,
+                        color: colors.textMain,
                         fontWeight: FontWeight.w900,
                         fontSize: 20,
                       ),
@@ -285,12 +524,12 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: NeonColors.primary.withValues(alpha: 0.1),
+                        color: colors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${lists.length}/5',
-                        style: GoogleFonts.plusJakartaSans(color: NeonColors.primary, fontWeight: FontWeight.w900, fontSize: 12),
+                        style: GoogleFonts.plusJakartaSans(color: colors.primary, fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
                   ],
@@ -304,9 +543,9 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.inventory_2_outlined, size: 48, color: NeonColors.textSub.withValues(alpha: 0.3)),
+                              Icon(Icons.inventory_2_outlined, size: 48, color: colors.textSub.withValues(alpha: 0.3)),
                               const SizedBox(height: 16),
-                              Text('저장된 명단이 없습니다.', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontWeight: FontWeight.bold)),
+                              Text('저장된 명단이 없습니다.', style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         )
@@ -325,30 +564,27 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: colors.cardBg,
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: NeonColors.stroke, width: 2),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
-                                  ],
+                                  border: Border.all(color: colors.stroke.withValues(alpha: 0.3), width: 1.5),
                                 ),
                                 child: Row(
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: NeonColors.pointGreen.withValues(alpha: 0.1),
+                                        color: colors.accent.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(14),
                                       ),
-                                      child: const Icon(Icons.person_pin_outlined, color: NeonColors.pointGreen, size: 24),
+                                      child: Icon(Icons.person_pin_outlined, color: colors.accent, size: 24),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(lists[i], style: GoogleFonts.plusJakartaSans(color: NeonColors.textMain, fontSize: 16, fontWeight: FontWeight.w900)),
-                                          Text('명단 등록됨', style: GoogleFonts.plusJakartaSans(color: NeonColors.textSub, fontSize: 12, fontWeight: FontWeight.w600)),
+                                          Text(lists[i], style: GoogleFonts.plusJakartaSans(color: colors.textMain, fontSize: 16, fontWeight: FontWeight.w900)),
+                                          Text('명단 등록됨', style: GoogleFonts.plusJakartaSans(color: colors.textSub, fontSize: 12, fontWeight: FontWeight.w600)),
                                         ],
                                       ),
                                     ),
@@ -373,222 +609,6 @@ class _ParticipantManagerDialogState extends State<ParticipantManagerDialog> {
           ),
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<LadderGameViewModel>();
-
-    if (_nameControllers.length != viewModel.playerCount) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _rebuildControllers(viewModel));
-      });
-    }
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: NeonColors.background,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: NeonColors.stroke, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: NeonColors.shadow.withOpacity(0.1),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: _saveAndClose,
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 22, color: NeonColors.primary),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '명단 관리',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: NeonColors.primary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Neon3DButton(
-                    size: 38,
-                    onPressed: () {
-                      if (viewModel.playerCount > 2) {
-                        viewModel.setPlayerCount(viewModel.playerCount - 1);
-                      }
-                    },
-                    child: const Icon(Icons.remove, color: Colors.white, size: 18),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 28,
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${viewModel.playerCount}',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: NeonColors.primary, 
-                        fontWeight: FontWeight.w900, 
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Neon3DButton(
-                    size: 38,
-                    onPressed: () {
-                      if (viewModel.playerCount < 20) {
-                        viewModel.setPlayerCount(viewModel.playerCount + 1);
-                      }
-                    },
-                    child: const Icon(Icons.add, color: Colors.white, size: 18),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1, color: Color(0xFFE5E0D5)),
-            Flexible(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shrinkWrap: true,
-                itemCount: viewModel.playerCount,
-                itemBuilder: (_, i) {
-                  // 인덱스 초과 에러 방지를 위한 2중 안전 장치
-                  if (i >= _nameControllers.length || i >= viewModel.currentParticipants.length) {
-                    return const SizedBox();
-                  }
-                  final p = viewModel.currentParticipants[i];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            SoundManager().playTick();
-                            _showAnimalPicker(i);
-                          },
-                          child: Container(
-                            width: 48, height: 48,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: NeonColors.stroke.withOpacity(0.1)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: NeonColors.shadow.withOpacity(0.02),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Text(p.emoji, style: const TextStyle(fontSize: 24)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _nameControllers[i],
-                            focusNode: _focusNodes[i],
-                            style: GoogleFonts.plusJakartaSans(color: NeonColors.textMain, fontSize: 15, fontWeight: FontWeight.w600),
-                            decoration: InputDecoration(
-                              hintText: '참가자 이름',
-                              hintStyle: TextStyle(color: NeonColors.textSub.withOpacity(0.5)),
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: NeonColors.stroke, width: 1),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: NeonColors.stroke, width: 2),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: NeonColors.primary, width: 2),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                            onChanged: (val) => viewModel.updateParticipantName(i, val),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            const Divider(height: 1, color: Color(0xFFE5E0D5)),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Neon3DButton(
-                      size: 56,
-                      isCircle: false,
-                      baseColor: Colors.white,
-                      onPressed: () {
-                        SoundManager().playTick();
-                        _showLoadDialog();
-                      },
-                      child: Text(
-                        '불러오기',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: NeonColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Neon3DButton(
-                      size: 56,
-                      isCircle: false,
-                      baseColor: NeonColors.primary,
-                      onPressed: () {
-                        SoundManager().playTick();
-                        _showSaveDialog();
-                      },
-                      child: Text(
-                        '명단 저장',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
