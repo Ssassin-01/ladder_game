@@ -102,6 +102,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                 Icons.dangerous,
                 colors.modePenalty,
                 colors,
+                settings,
               ),
               const SizedBox(height: 20),
 
@@ -115,6 +116,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       Icons.star,
                       colors.modeWin,
                       colors,
+                      settings,
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -126,6 +128,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       Icons.icecream,
                       colors.modeShoot,
                       colors,
+                      settings,
                     ),
                   ),
                 ],
@@ -141,6 +144,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       Icons.format_list_numbered,
                       colors.modeOrder,
                       colors,
+                      settings,
                     ),
                   ),
                   const SizedBox(width: 20),
@@ -152,6 +156,7 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
                       Icons.groups,
                       colors.modeTeam,
                       colors,
+                      settings,
                     ),
                   ),
                 ],
@@ -173,12 +178,12 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
     );
   }
 
-  Widget _buildLargeModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor, LadderThemeData colors) {
-    // Determine context-aware text/icon color for the button
-    final bool isNeon = bgColor.value == colors.primary.value || colors.background.value == 0xFF0F0F1A;
-    final Color contentColor = isNeon 
-        ? colors.onPrimary 
-        : (bgColor.computeLuminance() > 0.6 ? colors.textMain : Colors.white);
+  Widget _buildLargeModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor, LadderThemeData colors, SettingsViewModel settings) {
+    // context-aware text/icon color
+    final bool isForest = settings.currentThemeId == LadderThemeId.forest;
+    final Color contentColor = isForest 
+        ? (bgColor.computeLuminance() > 0.6 ? colors.onCardBg : Colors.white)
+        : (bgColor.computeLuminance() > 0.5 ? Color(0xFF0F0F1A) : Colors.white);
 
     return GestureDetector(
       onTap: () => _navigateToSettings(context, mode),
@@ -244,12 +249,12 @@ class _LadderHomeScreenState extends State<LadderHomeScreen> {
     );
   }
 
-  Widget _buildGridModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor, LadderThemeData colors) {
-    // Context-aware colors
-    final bool isNeon = bgColor.value == colors.primary.value || colors.background.value == 0xFF0F0F1A;
-    final Color contentColor = isNeon 
-        ? colors.onPrimary 
-        : (bgColor.computeLuminance() > 0.6 ? colors.textMain : Colors.white);
+  Widget _buildGridModeButton(BuildContext context, LadderGameMode mode, String label, IconData icon, Color bgColor, LadderThemeData colors, SettingsViewModel settings) {
+    // context-aware text/icon color
+    final bool isForest = settings.currentThemeId == LadderThemeId.forest;
+    final Color contentColor = isForest 
+        ? (bgColor.computeLuminance() > 0.6 ? colors.onCardBg : Colors.white)
+        : (bgColor.computeLuminance() > 0.5 ? Color(0xFF0F0F1A) : Colors.white);
 
     return GestureDetector(
       onTap: () => _navigateToSettings(context, mode),

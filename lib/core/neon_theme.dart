@@ -93,22 +93,22 @@ class NeonColors {
         );
       case LadderThemeId.ocean:
         return const LadderThemeData(
-          background: Color(0xFFF0F4FA),
+          background: Color(0xFFE8F1F9), // 배경을 살짝 더 차분하게
           primary: Color(0xFF0066FF),
           onPrimary: Colors.white,
-          accent: Color(0xFF66E0FF),
-          onAccent: Color(0xFF004D99),
-          stroke: Color(0xFF004D99),
+          accent: Color(0xFF004D99),     // 더 짙은 내비 블루로 입체감 부여
+          onAccent: Colors.white,
+          stroke: Color(0xFF004D99),     // 테두리를 명확하게
           shadow: Color(0xFF80B3FF),
           cardBg: Color(0xFFFFFFFF),
-          onCardBg: Color(0xFF004D99),
-          textMain: Color(0xFF004D99),
+          onCardBg: Color(0xFF003366),
+          textMain: Color(0xFF003366),   // 가독성 높은 딥 블루
           textSub: Color(0xFF4D80B3),
-          modePenalty: Color(0xFFE6F3FF),
-          modeWin: Color(0xFFB3D9FF),
-          modeShoot: Color(0xFF66B3FF),
-          modeOrder: Color(0xFFCCEEFF),
-          modeTeam: Color(0xFFF2F9FF),
+          modePenalty: Color(0xFFD9E9FF),
+          modeWin: Color(0xFFA6D2FF),
+          modeShoot: Color(0xFF1976D2), // 밝은 노랑 대신 진한 파랑으로 시인성 확보
+          modeOrder: Color(0xFFBBE1FA),
+          modeTeam: Color(0xFFF0F8FF),
         );
     }
   }

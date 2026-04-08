@@ -50,6 +50,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.soundEnabled,
                 onChanged: (_) => settings.toggleSound(),
                 colors: colors,
+                settings: settings,
               ),
               const SizedBox(height: 12),
               _buildSettingTile(
@@ -59,6 +60,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.hapticEnabled,
                 onChanged: (_) => settings.toggleHaptic(),
                 colors: colors,
+                settings: settings,
               ),
               const SizedBox(height: 40),
               _buildAppInfo(colors),
@@ -169,11 +171,12 @@ class SettingsScreen extends StatelessWidget {
     required bool value,
     required ValueChanged<bool> onChanged,
     required LadderThemeData colors,
+    required SettingsViewModel settings,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: NeonTheme.getCardDecoration(
-        bg: Colors.white,
+        bg: (settings.currentThemeId == LadderThemeId.forest) ? Colors.white : colors.cardBg,
         radius: 24,
         strokeColor: colors.stroke.withOpacity(0.1),
       ),

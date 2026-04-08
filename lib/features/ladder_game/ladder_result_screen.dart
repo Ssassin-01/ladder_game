@@ -130,6 +130,9 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     final settingsViewModel = context.watch<SettingsViewModel>();
     final colors = settingsViewModel.currentTheme;
     final viewModel = context.watch<LadderGameViewModel>();
+    final isForest = settingsViewModel.currentThemeId == LadderThemeId.forest;
+    final isNeon = settingsViewModel.currentThemeId == LadderThemeId.neon;
+    final isOcean = settingsViewModel.currentThemeId == LadderThemeId.ocean;
 
     final bool isOrderMode = viewModel.currentMode == LadderGameMode.order;
     final bool isManualMode = viewModel.currentMode == LadderGameMode.manual;
@@ -185,14 +188,14 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                       top: false,
                       bottom: false,
                       child: isTeamMode
-                        ? _buildTeamModeLayout(viewModel, colors)
+                        ? _buildTeamModeLayout(viewModel, colors, isForest, isNeon, isOcean)
                         : (isOrderMode 
-                          ? _buildOrderModeLayout(colors)
+                          ? _buildOrderModeLayout(colors, isForest, isNeon, isOcean)
                           : (isManualMode
-                             ? _buildManualModeLayout(colors)
+                             ? _buildManualModeLayout(colors, isForest, isNeon, isOcean)
                              : (isLandscape 
-                                ? _buildLandscapeLayout(colors) 
-                                : _buildPortraitLayout(colors)))),
+                                ? _buildLandscapeLayout(colors, isForest, isNeon, isOcean) 
+                                : _buildPortraitLayout(colors, isForest, isNeon, isOcean)))),
                     ),
                     const SizedBox(height: 100), 
                   ],
@@ -220,7 +223,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildManualModeLayout(LadderThemeData colors) {
+  Widget _buildManualModeLayout(LadderThemeData colors, bool isForest, bool isNeon, bool isOcean) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -281,7 +284,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                           Text(
                             result.text.isEmpty ? '(입력 내용 없음)' : result.text,
                             style: GoogleFonts.plusJakartaSans(
-                              color: colors.textMain,
+                              color: isForest ? colors.textMain : (colors.cardBg.computeLuminance() > 0.6 ? colors.textMain : Colors.white),
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
                             ),
@@ -308,7 +311,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildTeamModeLayout(LadderGameViewModel viewModel, LadderThemeData colors) {
+  Widget _buildTeamModeLayout(LadderGameViewModel viewModel, LadderThemeData colors, bool isForest, bool isNeon, bool isOcean) {
     final Map<String, List<ResultItem>> teamGroups = {};
     for (final r in widget.results) {
       String key = "기타";
@@ -354,7 +357,17 @@ class _LadderResultScreenState extends State<LadderResultScreen>
               margin: const EdgeInsets.symmetric(horizontal: 24),
               decoration: NeonTheme.getCardDecoration(
                 bg: colors.cardBg,
-                strokeColor: colors.stroke.withOpacity(0.1)
+                strokeColor: isOcean ? colors.stroke : colors.stroke.withOpacity(0.1)
+              ).copyWith(
+                boxShadow: isOcean ? [
+                  BoxShadow(
+                    color: colors.stroke.withValues(alpha: 0.15),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  )
+                ] : (isForest ? null : [
+                  BoxShadow(color: colors.stroke.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+                ]),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +465,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildOrderModeLayout(LadderThemeData colors) {
+  Widget _buildOrderModeLayout(LadderThemeData colors, bool isForest, bool isNeon, bool isOcean) {
     return Column(
       children: _sortedResults.asMap().entries.map((entry) {
         final index = entry.key;
@@ -495,7 +508,9 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     child: Text(
                       '$rankNum',
                       style: GoogleFonts.plusJakartaSans(
-                        color: isTop ? Colors.white : colors.textMain,
+                        color: isTop 
+                            ? (isForest ? Colors.white : (colors.modeOrder.computeLuminance() > 0.5 ? colors.textMain : Colors.white))
+                            : colors.textMain,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
                       ),
@@ -552,7 +567,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildLandscapeLayout(LadderThemeData colors) {
+  Widget _buildLandscapeLayout(LadderThemeData colors, bool isForest, bool isNeon, bool isOcean) {
     final viewModel = context.read<LadderGameViewModel>();
     final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
     final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -570,7 +585,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         Expanded(
           flex: 5,
           child: Column(
-            children: mainResults.map((result) => _buildPenaltyCard(result, colors, compact: true, 
+            children: mainResults.map((result) => _buildPenaltyCard(result, colors, isForest, isNeon, isOcean, compact: true, 
               isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
           ),
         ),
@@ -609,7 +624,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildPortraitLayout(LadderThemeData colors) {
+  Widget _buildPortraitLayout(LadderThemeData colors, bool isForest, bool isNeon, bool isOcean) {
     final viewModel = context.read<LadderGameViewModel>();
     final bool isWinMode = viewModel.currentMode == LadderGameMode.win;
     final bool isTreatMode = viewModel.currentMode == LadderGameMode.treat;
@@ -631,7 +646,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            children: mainResults.map((result) => _buildPenaltyCard(result, colors, isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
+            children: mainResults.map((result) => _buildPenaltyCard(result, colors, isForest, isNeon, isOcean, isWinMode: isWinMode, isTreatMode: isTreatMode)).toList(),
           ),
         ),
         const SizedBox(height: 12),
@@ -651,7 +666,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
     );
   }
 
-  Widget _buildPenaltyCard(ResultItem result, LadderThemeData colors, {bool compact = false, bool isWinMode = false, bool isTreatMode = false, bool isOrderMode = false}) {
+  Widget _buildPenaltyCard(ResultItem result, LadderThemeData colors, bool isForest, bool isNeon, bool isOcean, {bool compact = false, bool isWinMode = false, bool isTreatMode = false, bool isOrderMode = false}) {
     final i = _sortedResults.indexOf(result);
     
     Color statusBg = colors.modePenalty;
@@ -694,10 +709,10 @@ class _LadderResultScreenState extends State<LadderResultScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: statusBg.withOpacity(0.15),
-                blurRadius: 15,
-                spreadRadius: 1,
-                offset: const Offset(0, 8),
+                color: isOcean ? colors.stroke.withValues(alpha: 0.2) : statusBg.withValues(alpha: 0.15),
+                blurRadius: isOcean ? 20 : 15,
+                spreadRadius: isOcean ? 2 : 1,
+                offset: Offset(0, isOcean ? 12 : 8),
               ),
             ],
           ),
@@ -712,7 +727,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                 child: Text(
                   titleText,
                   style: GoogleFonts.plusJakartaSans(
-                    color: darkerModeColor, 
+                    color: isForest ? darkerModeColor : (statusBg.computeLuminance() > 0.5 ? (isNeon ? colors.textMain : (isOcean ? colors.onCardBg : colors.onCardBg)) : Colors.white), 
                     fontSize: compact ? 13 : 15, 
                     fontWeight: FontWeight.w900, 
                     letterSpacing: 1.0,
@@ -760,7 +775,7 @@ class _LadderResultScreenState extends State<LadderResultScreen>
                     result.text, 
                     textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white, 
+                      color: isForest ? Colors.white : (statusBg.computeLuminance() > 0.5 ? (isOcean ? colors.onCardBg : colors.textMain) : Colors.white), 
                       fontSize: compact ? 20 : 26, 
                       fontWeight: FontWeight.w900,
                     ),
